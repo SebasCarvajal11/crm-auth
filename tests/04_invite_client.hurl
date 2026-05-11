@@ -1,0 +1,59 @@
+# ============================================================
+# 04 — Invitación y aceptación de cliente (solo identidad en mod-auth)
+# ============================================================
+
+POST http://localhost:3000/auth/login
+Content-Type: application/json
+{
+  "email": "admin@cima.dev",
+  "password": "Admin123!"
+}
+HTTP 200
+[Captures]
+admin_token: jsonpath "$.data.access_token"
+
+POST http://localhost:3000/auth/invite-client
+Authorization: Bearer {{admin_token}}
+Content-Type: application/json
+{
+  "email": "cliente@cima.dev"
+}
+HTTP 201
+[Captures]
+invite_token: jsonpath "$.data.token"
+[Asserts]
+jsonpath "$.message" == "Invitación creada"
+
+GET http://localhost:3000/auth/accept-invite/{{invite_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.data.email" == "cliente@cima.dev"
+
+POST http://localhost:3000/auth/accept-invite
+Content-Type: application/json
+{
+  "token": "{{invite_token}}",
+  "password": "ClienteSeguro1!"
+}
+HTTP 201
+[Captures]
+client_access_token: jsonpath "$.data.access_token"
+[Asserts]
+jsonpath "$.data.access_token" isString
+jsonpath "$.data.user.role" == "client"
+cookie "refresh_token" exists
+
+POST http://localhost:3000/auth/accept-invite
+Content-Type: application/json
+{
+  "token": "{{invite_token}}",
+  "password": "ClienteSeguro1!"
+}
+HTTP 409
+
+GET http://localhost:3000/auth/me
+Authorization: Bearer {{client_access_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.data.role" == "client"
+jsonpath "$.data.email" == "cliente@cima.dev"

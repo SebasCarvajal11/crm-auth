@@ -1,0 +1,907 @@
+openapi: 3.0.3
+info:
+  title: CIMA CRM — mod-auth (Identidad y acceso)
+  description: |
+    Microservicio de autenticación: credenciales, JWT (RS256), refresh por cookie httpOnly,
+    invitaciones, recuperación de contraseña y administración de usuarios (rol admin).
+
+    Contratos de error: `{ "error": string }` salvo validación Zod en borde (formato propio de `@hono/zod-validator`).
+
+    **JWT:** claims típicos `sub` (UUID estable), `userId`, `role`, `email`, `exp`, `iat`; opcional `iss` si `JWT_ISS`; opcional `force_password_change`.
+  version: 1.0.0
+  license:
+    name: Proyecto académico CIMA CRM
+
+servers:
+  - url: http://localhost:3000
+    description: mod-auth directo (desarrollo)
+  - url: http://localhost:8080
+    description: KrakenD — entrada recomendada para el SPA
+
+tags:
+  - name: Sistema
+    description: Salud y claves públicas (JWKS)
+  - name: Documentación
+    description: Especificación OpenAPI y UI
+  - name: Auth — Pública
+    description: Login, refresh, recuperación, invitación (sin Bearer)
+  - name: Auth — Sesión
+    description: "Requiere `Authorization: Bearer <access_token>` (y cookie de refresh donde aplique)"
+  - name: Auth — Administración
+    description: Registro de worker e invitación de cliente (admin)
+  - name: Usuarios — Admin
+    description: Listado y gestión de cuentas (admin)
+
+paths:
+  /health:
+    get:
+      tags: [Sistema]
+      summary: Health check
+      operationId: healthCheck
+      responses:
+        "200":
+          description: Servicio activo
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, service]
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  service:
+                    type: string
+                    example: mod-auth
+
+  /.well-known/jwks.json:
+    get:
+      tags: [Sistema]
+      summary: JWKS (clave pública RS256 para validadores / KrakenD)
+      operationId: getJwks
+      responses:
+        "200":
+          description: Documento JWK Set (RFC 7517)
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Contiene `keys` con `kid`, `kty`, `n`, `e`, `alg`, `use`
+
+  /openapi.yaml:
+    get:
+      tags: [Documentación]
+      summary: Especificación OpenAPI (YAML)
+      operationId: getOpenApiYaml
+      responses:
+        "200":
+          description: Archivo OpenAPI 3
+          content:
+            application/yaml:
+              schema:
+                type: string
+                format: binary
+
+  /docs:
+    get:
+      tags: [Documentación]
+      summary: Swagger UI (documentación interactiva)
+      operationId: getSwaggerUi
+      responses:
+        "200":
+          description: HTML con Swagger UI
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /auth/login:
+    post:
+      tags: [Auth — Pública]
+      summary: Iniciar sesión
+      description: |
+        Establece cookie httpOnly `refresh_token` (path `/auth/refresh`, SameSite strict).
+        Rate limit configurable (Redis opcional).
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Sesión creada
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+              description: refresh_token (httpOnly)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/LoginSuccessData"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /auth/refresh:
+    post:
+      tags: [Auth — Pública]
+      summary: Renovar access token (cookie refresh_token)
+      operationId: refreshSession
+      parameters:
+        - name: Cookie
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Debe incluir `refresh_token=...`
+      responses:
+        "200":
+          description: Nuevo access token (y cookie de refresh rotada)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [access_token]
+                    properties:
+                      access_token:
+                        type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/logout:
+    post:
+      tags: [Auth — Sesión]
+      summary: Cerrar sesión actual
+      security:
+        - bearerAuth: []
+      operationId: logout
+      parameters:
+        - $ref: "#/components/parameters/CookieRefresh"
+      responses:
+        "200":
+          $ref: "#/components/responses/MessageSuccess"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/me:
+    get:
+      tags: [Auth — Sesión]
+      summary: Identidad del usuario autenticado
+      security:
+        - bearerAuth: []
+      operationId: getMe
+      responses:
+        "200":
+          description: Datos de identidad (sin perfil CRM)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/IdentityUser"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /auth/change-password:
+    post:
+      tags: [Auth — Sesión]
+      summary: Cambiar contraseña
+      security:
+        - bearerAuth: []
+      operationId: changePassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/MessageSuccess"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/sessions:
+    get:
+      tags: [Auth — Sesión]
+      summary: Listar sesiones activas del usuario
+      security:
+        - bearerAuth: []
+      operationId: listSessions
+      parameters:
+        - $ref: "#/components/parameters/CookieRefresh"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [sessions]
+                    properties:
+                      sessions:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/SessionInfo"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/sessions/{familyId}:
+    delete:
+      tags: [Auth — Sesión]
+      summary: Revocar una sesión por familia de refresh tokens
+      security:
+        - bearerAuth: []
+      operationId: revokeSession
+      parameters:
+        - name: familyId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: "#/components/parameters/CookieRefresh"
+      responses:
+        "200":
+          $ref: "#/components/responses/MessageSuccess"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /auth/request-email-verification:
+    post:
+      tags: [Auth — Sesión]
+      summary: Solicitar correo de verificación
+      security:
+        - bearerAuth: []
+      operationId: requestEmailVerification
+      responses:
+        "200":
+          description: Mensaje informativo
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                properties:
+                  message:
+                    type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/verify-email:
+    post:
+      tags: [Auth — Pública]
+      summary: Confirmar correo con token
+      operationId: verifyEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyEmailRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/MessageSuccess"
+
+  /auth/register-worker:
+    post:
+      tags: [Auth — Administración]
+      summary: Registrar trabajador (admin)
+      security:
+        - bearerAuth: []
+      operationId: registerWorker
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterWorkerRequest"
+      responses:
+        "201":
+          description: Usuario creado; en desarrollo puede incluir `temp_password`
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: "#/components/schemas/UserStub"
+                      temp_password:
+                        type: string
+                        description: Solo fuera de production
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /auth/invite-client:
+    post:
+      tags: [Auth — Administración]
+      summary: Invitar cliente por correo (admin)
+      security:
+        - bearerAuth: []
+      operationId: inviteClient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InviteClientRequest"
+      responses:
+        "201":
+          description: Invitación creada; token solo en dev/no production en JSON
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, data]
+                properties:
+                  message:
+                    type: string
+                    example: Invitación creada
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+                        description: Solo en desarrollo / testing
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /auth/accept-invite/{token}:
+    get:
+      tags: [Auth — Pública]
+      summary: Datos de la invitación (email)
+      operationId: getInvitationData
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [email]
+                    properties:
+                      email:
+                        type: string
+                        format: email
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /auth/accept-invite:
+    post:
+      tags: [Auth — Pública]
+      summary: Aceptar invitación y crear cuenta cliente
+      operationId: acceptInvite
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AcceptInviteRequest"
+      responses:
+        "201":
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [access_token, user]
+                    properties:
+                      access_token:
+                        type: string
+                      user:
+                        $ref: "#/components/schemas/UserStub"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /auth/forgot-password:
+    post:
+      tags: [Auth — Pública]
+      summary: Solicitar recuperación de contraseña
+      operationId: forgotPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordRequest"
+      responses:
+        "200":
+          description: Mensaje genérico; en desarrollo puede incluir token en data
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                properties:
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+                        description: Solo en desarrollo
+
+  /auth/reset-password:
+    post:
+      tags: [Auth — Pública]
+      summary: Restablecer contraseña con token
+      operationId: resetPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/MessageSuccess"
+
+  /users/:
+    get:
+      tags: [Usuarios — Admin]
+      summary: Listar usuarios (paginado)
+      security:
+        - bearerAuth: []
+      operationId: adminListUsers
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [admin, worker, client]
+        - name: include_deleted
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/AdminUserListPage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /users/{subject}/status:
+    patch:
+      tags: [Usuarios — Admin]
+      summary: Activar o desactivar usuario
+      security:
+        - bearerAuth: []
+      operationId: adminPatchUserStatus
+      parameters:
+        - $ref: "#/components/parameters/SubjectUuid"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchUserStatusBody"
+      responses:
+        "200":
+          $ref: "#/components/responses/MessageSuccess"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /users/{subject}/flags:
+    patch:
+      tags: [Usuarios — Admin]
+      summary: Forzar cambio de contraseña en próximo login
+      security:
+        - bearerAuth: []
+      operationId: adminPatchUserFlags
+      parameters:
+        - $ref: "#/components/parameters/SubjectUuid"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchUserFlagsBody"
+      responses:
+        "200":
+          $ref: "#/components/responses/MessageSuccess"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /users/{subject}/restore:
+    post:
+      tags: [Usuarios — Admin]
+      summary: Restaurar usuario archivado (soft-delete)
+      security:
+        - bearerAuth: []
+      operationId: adminRestoreUser
+      parameters:
+        - $ref: "#/components/parameters/SubjectUuid"
+      responses:
+        "200":
+          $ref: "#/components/responses/MessageSuccess"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /users/{subject}:
+    delete:
+      tags: [Usuarios — Admin]
+      summary: Archivar usuario (soft-delete)
+      security:
+        - bearerAuth: []
+      operationId: adminSoftDeleteUser
+      parameters:
+        - $ref: "#/components/parameters/SubjectUuid"
+      responses:
+        "200":
+          $ref: "#/components/responses/MessageSuccess"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access token RS256 emitido por mod-auth
+
+  parameters:
+    SubjectUuid:
+      name: subject
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: UUID público del usuario (`users.subject`)
+    CookieRefresh:
+      name: Cookie
+      in: header
+      schema:
+        type: string
+      description: Opcional — para marcar sesión actual en listados
+
+  responses:
+    Unauthorized:
+      description: No autenticado o token inválido
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorBody"
+    Forbidden:
+      description: Sin permisos para la operación
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorBody"
+    NotFound:
+      description: Recurso no encontrado
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorBody"
+    Conflict:
+      description: Conflicto de negocio (email duplicado, etc.)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorBody"
+    TooManyRequests:
+      description: Rate limit (login)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorBody"
+    MessageSuccess:
+      description: Operación correcta
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [message]
+            properties:
+              message:
+                type: string
+
+  schemas:
+    ErrorBody:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        password:
+          type: string
+          minLength: 8
+
+    LoginSuccessData:
+      type: object
+      required: [access_token, expires_in, user]
+      properties:
+        access_token:
+          type: string
+        expires_in:
+          type: integer
+          description: TTL del access token en segundos
+          example: 900
+        user:
+          $ref: "#/components/schemas/UserStub"
+
+    UserStub:
+      type: object
+      required: [id, role]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: subject estable del usuario
+        role:
+          type: string
+          enum: [admin, worker, client]
+        force_password_change:
+          type: boolean
+
+    IdentityUser:
+      type: object
+      required: [id, email, role, isActive]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [admin, worker, client]
+        isActive:
+          type: boolean
+        emailVerifiedAt:
+          type: string
+          format: date-time
+          nullable: true
+        force_password_change:
+          type: boolean
+        last_login_at:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+    ChangePasswordRequest:
+      type: object
+      required: [old_password, new_password]
+      properties:
+        old_password:
+          type: string
+        new_password:
+          type: string
+          description: |
+            Mínimo 8 caracteres, una mayúscula, un número y un carácter especial (@$!%*?&).
+
+    VerifyEmailRequest:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+
+    RegisterWorkerRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+
+    InviteClientRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+
+    AcceptInviteRequest:
+      type: object
+      required: [token, password]
+      properties:
+        token:
+          type: string
+        password:
+          type: string
+          description: Misma política que `new_password`
+
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+
+    ResetPasswordRequest:
+      type: object
+      required: [token, password]
+      properties:
+        token:
+          type: string
+        password:
+          type: string
+
+    SessionInfo:
+      type: object
+      properties:
+        family:
+          type: string
+          format: uuid
+        device_label:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        last_activity_at:
+          type: string
+          format: date-time
+        is_current:
+          type: boolean
+
+    AdminUserListPage:
+      type: object
+      required: [items, page, limit, total, total_pages]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminUserRow"
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        total_pages:
+          type: integer
+
+    AdminUserRow:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        role:
+          type: string
+        is_active:
+          type: boolean
+        email_verified_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_login_at:
+          type: string
+          format: date-time
+          nullable: true
+        locked_until:
+          type: string
+          format: date-time
+          nullable: true
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+        force_password_change:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    PatchUserStatusBody:
+      type: object
+      required: [is_active]
+      properties:
+        is_active:
+          type: boolean
+
+    PatchUserFlagsBody:
+      type: object
+      required: [force_password_change]
+      properties:
+        force_password_change:
+          type: boolean

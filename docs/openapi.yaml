@@ -1,0 +1,215 @@
+openapi: 3.1.0
+info:
+  title: CRM CIMA - Auth API
+  version: 1.0.0
+  description: Microservicio de autenticación, gestión de identidad y emisión de JWT.
+servers:
+  - url: /api/v1
+    description: API Gateway (KrakenD) / Base Path local
+
+paths:
+  /auth/login:
+    post:
+      summary: Iniciar sesión
+      operationId: loginUser
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login exitoso. Retorna Access Token y setea cookie de Refresh Token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Credenciales inválidas
+        '429':
+          description: Demasiados intentos fallidos (Rate limit)
+
+  /auth/invite-client:
+    post:
+      summary: Administrador invita a un nuevo cliente
+      operationId: inviteClient
+      tags: [Onboarding]
+      security:
+        - bearerAuth:[] # KrakenD pasará la identidad, pero documentamos que requiere auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InviteClientRequest'
+      responses:
+        '201':
+          description: Invitación creada y correo encolado.
+        '403':
+          description: No tiene permisos de administrador.
+
+  /auth/accept-invite:
+    post:
+      summary: Cliente acepta invitación y completa su registro
+      operationId: acceptInvite
+      tags: [Onboarding]
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcceptInviteRequest'
+      responses:
+        '200':
+          description: Registro completado. Retorna tokens de sesión.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # --- ENUMS ---
+    RoleEnum:
+      type: string
+      enum: [admin, worker, client]
+    ClientTypeEnum:
+      type: string
+      enum: [individual, business]
+    IdTypeEnum:
+      type: string
+      enum: [CC, CE, TI, PAS]
+
+    # --- REQUESTS ---
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 255
+        password:
+          type: string
+          format: password
+          minLength: 8
+
+    InviteClientRequest:
+      type: object
+      required:[email, client_type, data]
+      properties:
+        email:
+          type: string
+          format: email
+        client_type:
+          $ref: '#/components/schemas/ClientTypeEnum'
+        data:
+          $ref: '#/components/schemas/ClientDetailsPayload'
+
+    AcceptInviteRequest:
+      type: object
+      required: [password, data]
+      properties:
+        password:
+          type: string
+          format: password
+          minLength: 8
+          description: "Debe contener mayúscula, número y caracter especial."
+        data:
+          $ref: '#/components/schemas/ClientDetailsPayload'
+
+    # --- RESPONSES ---
+    LoginResponse:
+      type: object
+      required: [access_token, expires_in, user]
+      properties:
+        access_token:
+          type: string
+        expires_in:
+          type: integer
+          example: 900
+        user:
+          type: object
+          required:[id, role]
+          properties:
+            id:
+              type: string
+              format: uuid
+            role:
+              $ref: '#/components/schemas/RoleEnum'
+            client_type:
+              $ref: '#/components/schemas/ClientTypeEnum'
+
+    # --- POLIMORFISMO: DATOS DEL CLIENTE ---
+    ClientDetailsPayload:
+      type: object
+      discriminator:
+        propertyName: client_type # La validación dependerá de si es business o individual
+      oneOf:
+        - $ref: '#/components/schemas/IndividualClientDetails'
+        - $ref: '#/components/schemas/BusinessClientDetails'
+
+    IndividualClientDetails:
+      type: object
+      required:[first_name, last_name, id_type, id_number]
+      properties:
+        first_name:
+          type: string
+          maxLength: 100
+        last_name:
+          type: string
+          maxLength: 100
+        id_type:
+          $ref: '#/components/schemas/IdTypeEnum'
+        id_number:
+          type: string
+          maxLength: 20
+        phone:
+          type: string
+          maxLength: 20
+
+    BusinessClientDetails:
+      type: object
+      required:[company_name, nit, commercial_address, city, department, contact_name]
+      properties:
+        company_name:
+          type: string
+          maxLength: 200
+        nit:
+          type: string
+          maxLength: 20
+        commercial_address:
+          type: string
+          maxLength: 200
+        city:
+          type: string
+          maxLength: 100
+        department:
+          type: string
+          maxLength: 100
+        contact_name:
+          type: string
+          maxLength: 150
+        contact_role:
+          type: string
+          maxLength: 100
+        regime:
+          type: string
+          enum: [común, simplificado]
+        phone:
+          type: string
+          maxLength: 20

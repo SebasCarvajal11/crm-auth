@@ -1,0 +1,43 @@
+{
+  "name": "mod-auth",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "worker:email": "tsx src/workers/email.worker.ts",
+    "worker:email:prod": "tsx src/workers/email.worker.ts",
+    "build": "tsc",
+    "start": "tsx src/server.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "db:seed": "tsx src/db/seed.ts",
+    "db:partition-audit-migrate": "tsx src/db/scripts/migrate-audit-logs-partitioned.ts",
+    "db:ensure-audit-partitions": "tsx src/db/scripts/run-ensure-audit-partitions.ts",
+    "jwt:gen-keys": "tsx src/scripts/gen-jwt-keys.ts",
+    "test": "tsx src/scripts/reset-test-users.ts && hurl --test --jobs 1 tests/01_login.hurl tests/02_me.hurl tests/03_register_worker.hurl tests/04_invite_client.hurl tests/05_refresh_logout.hurl tests/06_password_reset.hurl tests/08_rbac.hurl",
+    "test:rate-limit": "hurl --test tests/07_rate_limit.hurl"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.14",
+    "@hono/zod-validator": "^0.8.0",
+    "bcrypt": "^6.0.0",
+    "bullmq": "^5.76.6",
+    "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.12.18",
+    "ioredis": "^5.10.1",
+    "nodemailer": "^8.0.7",
+    "pg": "^8.20.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/node": "^20.11.17",
+    "@types/nodemailer": "^8.0.0",
+    "@types/pg": "^8.20.0",
+    "drizzle-kit": "^0.31.10",
+    "tsx": "^4.7.1",
+    "typescript": "^5.8.3"
+  }
+}
