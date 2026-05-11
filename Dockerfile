@@ -1,17 +1,9 @@
-FROM node:20-alpine AS builder
+FROM node:20-alpine
 WORKDIR /app
 COPY package*.json tsconfig.json ./
-RUN npm ci
+RUN npm ci --omit=dev
 COPY src ./src
 COPY drizzle.config.ts ./ 
 COPY openapi ./openapi
-RUN npm run build
-
-FROM node:20-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --omit=dev
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/openapi ./openapi
 EXPOSE 3000
-CMD ["npx", "tsx", "dist/src/server.js"]
+CMD ["npx", "tsx", "src/server.ts"]
