@@ -29,6 +29,7 @@
     "ioredis": "^5.10.1",
     "nodemailer": "^8.0.7",
     "pg": "^8.20.0",
+    "tsx": "^4.21.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -37,7 +38,6 @@
     "@types/nodemailer": "^8.0.0",
     "@types/pg": "^8.20.0",
     "drizzle-kit": "^0.31.10",
-    "tsx": "^4.7.1",
     "typescript": "^5.8.3"
   }
 }

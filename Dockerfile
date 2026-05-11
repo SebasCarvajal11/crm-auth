@@ -14,4 +14,4 @@ RUN npm ci --omit=dev
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/openapi ./openapi
 EXPOSE 3000
-CMD ["node", "dist/src/server.js"]
+CMD ["npx", "tsx", "dist/src/server.js"]
