@@ -25,12 +25,12 @@ const envSchema = z.object({
   /** Redis opcional: si está definido, la cola de emails BullMQ funciona con reintento distribuido. */
   REDIS_URL: z.string().url().optional(),
   /** Tras N intentos fallidos por cuenta se bloquea temporalmente. */
-  LOGIN_LOCKOUT_MAX_ATTEMPTS: z.coerce.number().int().min(3).max(50).default(8),
+  LOGIN_LOCKOUT_MAX_ATTEMPTS: z.coerce.number().int().min(3).max(50).default(15),
   LOGIN_LOCKOUT_DURATION_MS: z.coerce
     .number()
     .int()
     .positive()
-    .default(30 * 60 * 1000),
+    .default(5 * 60 * 1000), // 5 minutos
   PORT: z.coerce.number().default(3000),
   /**
    * Si es true y GATEWAY_TRUST_SECRET coincide con la cabecera `X-Gateway-Trust` que inyecta KrakenD,
