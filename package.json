@@ -7,6 +7,7 @@
     "worker:email:prod": "tsx src/workers/email.worker.ts",
     "build": "tsc",
     "start": "tsx src/server.ts",
+    "preinstall": "npx only-allow pnpm",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
