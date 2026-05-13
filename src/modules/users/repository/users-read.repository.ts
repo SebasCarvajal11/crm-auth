@@ -51,6 +51,11 @@ export const usersReadRepository = {
         subject: users.subject,
         email:   users.email,
         role:    users.role,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        clientKind: users.clientKind,
+        companyName: users.companyName,
+        profession: users.profession,
       })
       .from(users)
       .where(
@@ -72,6 +77,11 @@ export const usersReadRepository = {
         subject: users.subject,
         email:   users.email,
         role:    users.role,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        clientKind: users.clientKind,
+        companyName: users.companyName,
+        profession: users.profession,
       })
       .from(users)
       .where(and(isNull(users.deletedAt), inArray(users.subject, subjects)));

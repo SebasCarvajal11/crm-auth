@@ -14,6 +14,7 @@ import { relations } from "drizzle-orm";
 export const authSchema = pgSchema("schema_auth");
 
 export const roleEnum = authSchema.enum("role", ["admin", "worker", "client"]);
+export const clientKindEnum = authSchema.enum("client_kind", ["natural", "juridical"]);
 
 /** Identidad mínima: credenciales, rol y estado de cuenta (sin perfil CRM ni datos fiscales). */
 export const users = authSchema.table("users", {
@@ -22,6 +23,11 @@ export const users = authSchema.table("users", {
   email: varchar("email", { length: 255 }).unique().notNull(),
   passwordHash: varchar("password_hash", { length: 255 }).notNull(),
   role: roleEnum("role").notNull(),
+  firstName: varchar("first_name", { length: 120 }),
+  lastName: varchar("last_name", { length: 120 }),
+  clientKind: clientKindEnum("client_kind"),
+  companyName: varchar("company_name", { length: 160 }),
+  profession: varchar("profession", { length: 160 }),
   isActive: boolean("is_active").default(true).notNull(),
   emailVerifiedAt: timestamp("email_verified_at", { mode: "date" }),
   lastLoginAt: timestamp("last_login_at", { mode: "date" }),
@@ -48,6 +54,10 @@ export const refreshTokens = authSchema.table("refresh_tokens", {
 export const invitations = authSchema.table("invitations", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: varchar("email", { length: 255 }).notNull(),
+  firstName: varchar("first_name", { length: 120 }),
+  lastName: varchar("last_name", { length: 120 }),
+  clientKind: clientKindEnum("client_kind"),
+  companyName: varchar("company_name", { length: 160 }),
   token: varchar("token", { length: 255 }).unique().notNull(),
   createdBy: uuid("created_by").notNull().references(() => users.id),
   acceptedAt: timestamp("accepted_at", { mode: "date" }),

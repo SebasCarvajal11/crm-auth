@@ -34,12 +34,18 @@ export const createWorkerRegistrationMethods = (
       email: data.email,
       passwordHash,
       role: "worker",
+      firstName: data.first_name,
+      lastName: data.last_name,
+      profession: data.profession,
       emailVerifiedAt: new Date(),
       forcePasswordChange: true,
     });
 
     await repo.createAuditLog(adminUserId, "worker_registered", ip, userAgent, {
       email: data.email,
+      first_name: data.first_name,
+      last_name: data.last_name,
+      profession: data.profession,
     });
 
     mail
@@ -55,6 +61,9 @@ export const createWorkerRegistrationMethods = (
         id: user.subject,
         email: user.email,
         role: user.role,
+        first_name: user.firstName,
+        last_name: user.lastName,
+        profession: user.profession,
         force_password_change: true,
       },
       ...(env.NODE_ENV !== "production" ? { temp_password: tempPassword } : {}),

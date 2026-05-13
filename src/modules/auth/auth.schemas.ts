@@ -2,27 +2,51 @@ import { z } from "zod";
 
 export const RoleEnum = z.enum(["admin", "worker", "client"]);
 
+const ClientKindEnum = z.enum(["natural", "juridical"]);
+const nameField = z.string().trim().min(1).max(120);
+const professionField = z.string().trim().min(1).max(160);
+
 export const LoginRequestSchema = z.object({
   email: z
     .string()
-    .email({ message: "Correo no válido" })
+    .email({ message: "Correo no valido" })
     .max(255, { message: "El correo es demasiado largo" }),
   password: z
     .string()
-    .min(8, { message: "La contraseña debe tener al menos 8 caracteres" }),
+    .min(8, { message: "La contrasena debe tener al menos 8 caracteres" }),
 });
 
-/** Solo email; el perfil comercial/fiscal será mod-users / mod-crm. */
-export const InviteClientRequestSchema = z.object({
-  email: z.string().email().max(255),
-});
+export const InviteClientRequestSchema = z
+  .object({
+    email: z.string().email().max(255),
+    first_name: nameField,
+    last_name: nameField,
+    client_kind: ClientKindEnum,
+    company_name: z.string().trim().max(160).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.client_kind === "juridical" && !data.company_name) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["company_name"],
+        message: "company_name es requerido para cliente juridico",
+      });
+    }
+    if (data.client_kind === "natural" && data.company_name) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["company_name"],
+        message: "company_name solo aplica para cliente juridico",
+      });
+    }
+  });
 
 const passwordSchema = z
   .string()
   .min(8)
   .regex(
     /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
-    "Mínimo 8 caracteres, una mayúscula, un número y un carácter especial."
+    "Minimo 8 caracteres, una mayuscula, un numero y un caracter especial."
   );
 
 export const AcceptInviteRequestSchema = z.object({
@@ -32,6 +56,9 @@ export const AcceptInviteRequestSchema = z.object({
 
 export const RegisterWorkerSchema = z.object({
   email: z.string().email().max(255),
+  first_name: nameField,
+  last_name: nameField,
+  profession: professionField,
 });
 
 export const ForgotPasswordSchema = z.object({
@@ -49,7 +76,7 @@ export const ChangePasswordSchema = z
     new_password: passwordSchema,
   })
   .refine((d) => d.old_password !== d.new_password, {
-    message: "La nueva contraseña debe ser distinta de la actual.",
+    message: "La nueva contrasena debe ser distinta de la actual.",
     path: ["new_password"],
   });
 

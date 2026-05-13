@@ -36,6 +36,10 @@ export const createInvitationMethods = (
 
     await repo.createInvitation({
       email: data.email,
+      firstName: data.first_name,
+      lastName: data.last_name,
+      clientKind: data.client_kind,
+      companyName: data.company_name ?? null,
       token: rawToken,
       createdBy: adminUserId,
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
@@ -43,6 +47,10 @@ export const createInvitationMethods = (
 
     await repo.createAuditLog(adminUserId, "invitation_created", ip, userAgent, {
       email: data.email,
+      first_name: data.first_name,
+      last_name: data.last_name,
+      client_kind: data.client_kind,
+      company_name: data.company_name ?? null,
     });
 
     mail
@@ -65,6 +73,10 @@ export const createInvitationMethods = (
 
     return {
       email: invitation.email,
+      first_name: invitation.firstName,
+      last_name: invitation.lastName,
+      client_kind: invitation.clientKind,
+      company_name: invitation.companyName,
     };
   },
 
@@ -91,6 +103,10 @@ export const createInvitationMethods = (
       email: invitation.email,
       passwordHash,
       role: "client",
+      firstName: invitation.firstName,
+      lastName: invitation.lastName,
+      clientKind: invitation.clientKind,
+      companyName: invitation.companyName,
       emailVerifiedAt: new Date(),
     });
 

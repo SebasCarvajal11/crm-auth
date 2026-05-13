@@ -12,11 +12,30 @@ export const createAdminUserMethods = (repo: UsersRepository) => ({
     role: "admin" | "worker" | "client" = "client"
   ) => {
     const rows = await repo.searchActiveByEmailAndRole(q, role);
-    return rows.map((u) => ({ subject: u.subject, email: u.email, role: u.role }));
+    return rows.map((u) => ({
+      subject: u.subject,
+      email: u.email,
+      role: u.role,
+      first_name: u.firstName,
+      last_name: u.lastName,
+      client_kind: u.clientKind,
+      company_name: u.companyName,
+      profession: u.profession,
+    }));
   },
 
   getUsersBySubjects: async (subjects: string[]) => {
-    return repo.findBySubjects(subjects);
+    const rows = await repo.findBySubjects(subjects);
+    return rows.map((u) => ({
+      subject: u.subject,
+      email: u.email,
+      role: u.role,
+      first_name: u.firstName,
+      last_name: u.lastName,
+      client_kind: u.clientKind,
+      company_name: u.companyName,
+      profession: u.profession,
+    }));
   },
 
   adminListUsers: async (
@@ -37,6 +56,11 @@ export const createAdminUserMethods = (repo: UsersRepository) => ({
         id: u.subject,
         email: u.email,
         role: u.role,
+        first_name: u.firstName,
+        last_name: u.lastName,
+        client_kind: u.clientKind,
+        company_name: u.companyName,
+        profession: u.profession,
         is_active: u.isActive,
         email_verified_at: u.emailVerifiedAt?.toISOString() ?? null,
         last_login_at: u.lastLoginAt?.toISOString() ?? null,
