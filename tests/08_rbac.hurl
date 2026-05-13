@@ -16,7 +16,10 @@ POST http://localhost:3000/auth/register-worker
 Authorization: Bearer {{admin_token_rbac}}
 Content-Type: application/json
 {
-  "email": "worker.rbac@cima.dev"
+  "email": "worker.rbac@cima.dev",
+  "first_name": "Laura",
+  "last_name": "Gomez",
+  "profession": "QA"
 }
 HTTP 201
 [Captures]
@@ -36,7 +39,10 @@ POST http://localhost:3000/auth/invite-client
 Authorization: Bearer {{worker_token}}
 Content-Type: application/json
 {
-  "email": "otro@cima.dev"
+  "email": "otro@cima.dev",
+  "first_name": "Mario",
+  "last_name": "Perez",
+  "client_kind": "natural"
 }
 HTTP 403
 [Asserts]
@@ -46,7 +52,10 @@ POST http://localhost:3000/auth/register-worker
 Authorization: Bearer {{worker_token}}
 Content-Type: application/json
 {
-  "email": "otro_worker@cima.dev"
+  "email": "otro_worker@cima.dev",
+  "first_name": "Nora",
+  "last_name": "Suarez",
+  "profession": "DevOps"
 }
 HTTP 403
 

@@ -16,7 +16,11 @@ POST http://localhost:3000/auth/invite-client
 Authorization: Bearer {{admin_token}}
 Content-Type: application/json
 {
-  "email": "cliente@cima.dev"
+  "email": "cliente@cima.dev",
+  "first_name": "Carlos",
+  "last_name": "Lopez",
+  "client_kind": "juridical",
+  "company_name": "Cliente SAS"
 }
 HTTP 201
 [Captures]
@@ -28,6 +32,10 @@ GET http://localhost:3000/auth/accept-invite/{{invite_token}}
 HTTP 200
 [Asserts]
 jsonpath "$.data.email" == "cliente@cima.dev"
+jsonpath "$.data.first_name" == "Carlos"
+jsonpath "$.data.last_name" == "Lopez"
+jsonpath "$.data.client_kind" == "juridical"
+jsonpath "$.data.company_name" == "Cliente SAS"
 
 POST http://localhost:3000/auth/accept-invite
 Content-Type: application/json
@@ -57,3 +65,7 @@ HTTP 200
 [Asserts]
 jsonpath "$.data.role" == "client"
 jsonpath "$.data.email" == "cliente@cima.dev"
+jsonpath "$.data.first_name" == "Carlos"
+jsonpath "$.data.last_name" == "Lopez"
+jsonpath "$.data.client_kind" == "juridical"
+jsonpath "$.data.company_name" == "Cliente SAS"

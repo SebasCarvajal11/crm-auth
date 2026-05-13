@@ -36,6 +36,6 @@ HTTP 200
 access_token: jsonpath "$.data.access_token"
 [Asserts]
 jsonpath "$.data.access_token" isString
-jsonpath "$.data.expires_in" == 900
+jsonpath "$.data.expires_in" == 28800
 jsonpath "$.data.user.role" == "admin"
 cookie "refresh_token" exists

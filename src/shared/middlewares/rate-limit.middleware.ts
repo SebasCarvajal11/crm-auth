@@ -2,12 +2,12 @@ import { createMiddleware } from "hono/factory";
 import type { AppEnv } from "./auth.middleware";
 import { TooManyRequestsError } from "./error-handler.middleware";
 
-interface IpRecord {
+interface RateRecord {
   count: number;
   resetAt: number;
 }
 
-const attempts = new Map<string, IpRecord>();
+const attempts = new Map<string, RateRecord>();
 
 const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutos
 let lastCleanup = Date.now();
@@ -15,9 +15,9 @@ let lastCleanup = Date.now();
 function cleanupExpired(now: number) {
   if (now - lastCleanup < CLEANUP_INTERVAL_MS) return;
   lastCleanup = now;
-  for (const [ip, record] of attempts) {
+  for (const [key, record] of attempts) {
     if (record.resetAt <= now) {
-      attempts.delete(ip);
+      attempts.delete(key);
     }
   }
 }
@@ -33,11 +33,13 @@ export function ipRateLimit(opts: { maxAttempts: number; windowMs: number }) {
       c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ??
       c.req.header("x-real-ip") ??
       "unknown";
+    const routeKey = c.req.path;
+    const bucketKey = `${routeKey}:${ip}`;
     const now = Date.now();
 
     cleanupExpired(now);
 
-    const record = attempts.get(ip);
+    const record = attempts.get(bucketKey);
     if (record && record.resetAt > now) {
       if (record.count >= opts.maxAttempts) {
         throw new TooManyRequestsError(
@@ -46,7 +48,7 @@ export function ipRateLimit(opts: { maxAttempts: number; windowMs: number }) {
       }
       record.count++;
     } else {
-      attempts.set(ip, { count: 1, resetAt: now + opts.windowMs });
+      attempts.set(bucketKey, { count: 1, resetAt: now + opts.windowMs });
     }
 
     await next();
