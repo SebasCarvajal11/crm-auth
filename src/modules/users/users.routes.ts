@@ -12,6 +12,7 @@ import {
   AdminPatchUserFlagsSchema,
   AdminPatchUserStatusSchema,
   AdminUserSubjectParamSchema,
+  BySubjectsQuerySchema,
   SearchUsersQuerySchema,
 } from "./users.schemas";
 
@@ -26,6 +27,15 @@ usersAdminRoutes.get(
   requireRole("admin", "worker"),
   zValidator("query", SearchUsersQuerySchema),
   controller.search
+);
+
+/** Busca usuarios por lista de subjects (UUIDs) — para enriquecimiento batch. */
+usersAdminRoutes.get(
+  "/by-subjects",
+  authMiddleware,
+  requireRole("admin", "worker"),
+  zValidator("query", BySubjectsQuerySchema),
+  controller.bySubjects
 );
 
 usersAdminRoutes.get(

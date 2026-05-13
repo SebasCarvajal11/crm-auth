@@ -27,7 +27,12 @@ export const SearchUsersQuerySchema = z.object({
   role: RoleEnum.default("client"),
 });
 
+export const BySubjectsQuerySchema = z.object({
+  subjects: z.string().min(1).transform((s) => s.split(",").filter(Boolean)),
+});
+
 export type AdminListUsersQuery = z.infer<typeof AdminListUsersQuerySchema>;
 export type AdminPatchUserStatusBody = z.infer<typeof AdminPatchUserStatusSchema>;
 export type AdminPatchUserFlagsBody = z.infer<typeof AdminPatchUserFlagsSchema>;
 export type SearchUsersQuery = z.infer<typeof SearchUsersQuerySchema>;
+export type BySubjectsQuery = z.infer<typeof BySubjectsQuerySchema>;

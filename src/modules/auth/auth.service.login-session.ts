@@ -91,6 +91,35 @@ export const createLoginSessionMethods = (repo: UsersRepository) => ({
     if (!tokenRecord) throw new UnauthorizedError("Token de refresco inválido");
 
     if (tokenRecord.isRevoked) {
+      // Grace period: si el token fue recientemente rotado, no destruir la sesión
+      const latestToken = await repo.findLatestActiveTokenByFamily(tokenRecord.family);
+      if (latestToken) {
+        const ageMs = Date.now() - latestToken.createdAt.getTime();
+        if (ageMs < 30_000) {
+          // Token recientemente rotado (retry de red) — generar nuevo par sin destruir familia
+          const user = await repo.findById(tokenRecord.userId);
+          if (user && user.isActive) {
+            await repo.revokeToken(latestToken.id);
+            const newAccessToken = buildAccessToken(
+              user.subject, user.id, user.role, user.email, user.forcePasswordChange
+            );
+            const newRawRefreshToken = generateOpaqueRefreshToken();
+            await repo.saveRefreshToken({
+              userId: user.id,
+              tokenHash: hashRefreshToken(newRawRefreshToken),
+              family: tokenRecord.family,
+              expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
+              deviceInfo: userAgent,
+            });
+            await repo.createAuditLog(
+              tokenRecord.userId, "token_refresh_grace_period", ip, userAgent,
+              { family: tokenRecord.family, ageMs }
+            );
+            return { access_token: newAccessToken, refresh_token: newRawRefreshToken };
+          }
+        }
+      }
+      // Grace period expirado o sin token activo → reuse malicioso
       await repo.revokeTokenFamily(tokenRecord.family);
       await repo.createAuditLog(
         tokenRecord.userId,
@@ -143,7 +172,7 @@ export const createLoginSessionMethods = (repo: UsersRepository) => ({
     const tokenHash = hashRefreshToken(plainRefreshToken);
     const tokenRecord = await repo.findRefreshToken(tokenHash);
     if (tokenRecord) {
-      await repo.revokeToken(tokenRecord.id);
+      await repo.revokeTokenFamily(tokenRecord.family);
     }
     await repo.createAuditLog(userId, "logout", ip, userAgent);
   },

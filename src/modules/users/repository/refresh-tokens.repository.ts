@@ -22,6 +22,23 @@ export const refreshTokensRepository = {
     return token ?? null;
   },
 
+  /** Token más reciente no revocado de una familia (para grace period). */
+  findLatestActiveTokenByFamily: async (familyId: string) => {
+    const [token] = await db
+      .select()
+      .from(refreshTokens)
+      .where(
+        and(
+          eq(refreshTokens.family, familyId),
+          eq(refreshTokens.isRevoked, false),
+          gt(refreshTokens.expiresAt, new Date())
+        )
+      )
+      .orderBy(desc(refreshTokens.createdAt))
+      .limit(1);
+    return token ?? null;
+  },
+
   revokeToken: async (tokenId: string) => {
     await db
       .update(refreshTokens)

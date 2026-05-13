@@ -15,6 +15,10 @@ export const createAdminUserMethods = (repo: UsersRepository) => ({
     return rows.map((u) => ({ subject: u.subject, email: u.email, role: u.role }));
   },
 
+  getUsersBySubjects: async (subjects: string[]) => {
+    return repo.findBySubjects(subjects);
+  },
+
   adminListUsers: async (
     page: number,
     limit: number,

@@ -1,4 +1,4 @@
-import { and, eq, ilike, isNull } from "drizzle-orm";
+import { and, eq, ilike, inArray, isNull } from "drizzle-orm";
 import { db } from "../../../db/connection";
 import { users } from "../../../db/schema";
 
@@ -62,5 +62,18 @@ export const usersReadRepository = {
       )
       .orderBy(users.email)
       .limit(limit);
+  },
+
+  /** Busca usuarios activos por lista de subjects (UUIDs). Para enriquecimiento batch. */
+  findBySubjects: async (subjects: string[]) => {
+    if (!subjects.length) return [];
+    return db
+      .select({
+        subject: users.subject,
+        email:   users.email,
+        role:    users.role,
+      })
+      .from(users)
+      .where(and(isNull(users.deletedAt), inArray(users.subject, subjects)));
   },
 };

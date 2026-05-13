@@ -6,6 +6,7 @@ import type {
   AdminListUsersQuery,
   AdminPatchUserFlagsBody,
   AdminPatchUserStatusBody,
+  BySubjectsQuery,
   SearchUsersQuery,
 } from "./users.schemas";
 
@@ -19,6 +20,13 @@ export const createUsersAdminController = (authService: AuthService) => ({
   search: async (c: Context<AppEnv>) => {
     const q = validatedQuery<SearchUsersQuery>(c);
     const results = await authService.searchUsersByEmail(q.q, q.role);
+    return c.json({ data: results }, 200);
+  },
+
+  /** Busca usuarios por lista de subjects (UUIDs) — para enriquecimiento batch. */
+  bySubjects: async (c: Context<AppEnv>) => {
+    const q = validatedQuery<BySubjectsQuery>(c);
+    const results = await authService.getUsersBySubjects(q.subjects);
     return c.json({ data: results }, 200);
   },
 

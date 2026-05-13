@@ -18,6 +18,7 @@ import {
   requireRole,
   type AppEnv,
 } from "../../shared/middlewares/auth.middleware";
+import { ipRateLimit } from "../../shared/middlewares/rate-limit.middleware";
 import { createEmailJobPublisher } from "../../queues/email.queue";
 import { z } from "zod";
 
@@ -38,6 +39,7 @@ export const authRoutes = new Hono<AppEnv>();
 
 authRoutes.post(
   "/login",
+  ipRateLimit({ maxAttempts: 20, windowMs: 15 * 60 * 1000 }),
   zValidator("json", LoginRequestSchema),
   authController.login
 );
@@ -112,6 +114,7 @@ authRoutes.post(
 
 authRoutes.post(
   "/forgot-password",
+  ipRateLimit({ maxAttempts: 5, windowMs: 60 * 60 * 1000 }),
   zValidator("json", ForgotPasswordSchema),
   authController.forgotPassword
 );

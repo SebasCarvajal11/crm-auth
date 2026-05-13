@@ -74,6 +74,15 @@ function payloadFromTrustedGateway(c: {
 }
 
 export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
+  if (env.TRUST_GATEWAY_JWT_HEADERS && env.GATEWAY_TRUST_SECRET) {
+    const trustHeader = c.req.header("X-Gateway-Trust");
+    if (!trustHeader) {
+      console.warn("[auth] X-Gateway-Trust header missing — falling back to JWT verification");
+    } else if (trustHeader !== env.GATEWAY_TRUST_SECRET) {
+      console.warn("[auth] X-Gateway-Trust mismatch — falling back to JWT verification");
+    }
+  }
+
   const trusted = payloadFromTrustedGateway(c);
   if (trusted) {
     c.set("user", trusted);
