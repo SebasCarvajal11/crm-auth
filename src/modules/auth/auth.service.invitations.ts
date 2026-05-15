@@ -61,7 +61,7 @@ export const createInvitationMethods = (
       })
       .catch((err) => console.error("[mail enqueue invite]", err));
 
-    return env.NODE_ENV !== "production" ? { token: rawToken } : {};
+    return env.NODE_ENV === "test" ? { token: rawToken } : undefined;
   },
 
   getInvitationData: async (token: string) => {

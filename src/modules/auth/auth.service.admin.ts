@@ -12,7 +12,7 @@ export const createAdminUserMethods = (repo: UsersRepository) => ({
     role: "admin" | "worker" | "client" = "client"
   ) => {
     const rows = await repo.searchActiveByEmailAndRole(q, role);
-    return rows.map((u) => ({
+    return rows.map((u: any) => ({
       subject: u.subject,
       email: u.email,
       role: u.role,
@@ -26,7 +26,7 @@ export const createAdminUserMethods = (repo: UsersRepository) => ({
 
   getUsersBySubjects: async (subjects: string[]) => {
     const rows = await repo.findBySubjects(subjects);
-    return rows.map((u) => ({
+    return rows.map((u: any) => ({
       subject: u.subject,
       email: u.email,
       role: u.role,
@@ -42,17 +42,19 @@ export const createAdminUserMethods = (repo: UsersRepository) => ({
     page: number,
     limit: number,
     role?: "admin" | "worker" | "client",
-    includeDeleted?: boolean
+    includeDeleted?: boolean,
+    q?: string
   ) => {
     const { rows, total } = await repo.listUsersPaginated({
       page,
       limit,
       role,
       includeDeleted: includeDeleted ?? false,
+      q,
     });
     const totalPages = total === 0 ? 0 : Math.ceil(total / limit);
     return {
-      items: rows.map((u) => ({
+      items: rows.map((u: any) => ({
         id: u.subject,
         email: u.email,
         role: u.role,

@@ -4,7 +4,7 @@ import type { UsersRepository } from "../users/users.repository";
 import type { RegisterWorkerRequest } from "./auth.schemas";
 import type { EmailJobPublisher } from "../../email/transactional-email.types";
 import { env } from "../../config/env";
-import { ConflictError } from "../../shared/middlewares/error-handler.middleware";
+import { ConflictError, UnauthorizedError } from "../../shared/middlewares/error-handler.middleware";
 import { BCRYPT_ROUNDS } from "./auth.constants";
 
 export const createWorkerRegistrationMethods = (
@@ -66,7 +66,73 @@ export const createWorkerRegistrationMethods = (
         profession: user.profession,
         force_password_change: true,
       },
-      ...(env.NODE_ENV !== "production" ? { temp_password: tempPassword } : {}),
+      ...(env.NODE_ENV === "test" ? { temp_password: tempPassword } : {}),
+    };
+  },
+
+  inviteAdmin: async (
+    data: {
+      email: string;
+      first_name: string;
+      last_name: string;
+      secret_password: string;
+    },
+    adminUserId: string,
+    ip: string,
+    userAgent: string
+  ) => {
+    if (!env.ADMIN_INVITE_SECRET || data.secret_password !== env.ADMIN_INVITE_SECRET) {
+      throw new UnauthorizedError("Contraseña secreta inválida para invitar administradores");
+    }
+
+    const existing = await repo.findByEmailIncludingDeleted(data.email);
+    if (existing && !existing.deletedAt) {
+      throw new ConflictError("Ya existe un usuario con ese correo");
+    }
+    if (existing?.deletedAt) {
+      throw new ConflictError(
+        "Existe una cuenta archivada con ese correo; restáurala desde administración o usa otro correo."
+      );
+    }
+
+    const tempPassword = randomBytes(8).toString("hex");
+    const passwordHash = await hash(tempPassword, BCRYPT_ROUNDS);
+
+    const user = await repo.createUser({
+      email: data.email,
+      passwordHash,
+      role: "admin",
+      firstName: data.first_name,
+      lastName: data.last_name,
+      emailVerifiedAt: new Date(),
+      forcePasswordChange: true,
+    });
+
+    await repo.createAuditLog(adminUserId, "admin_invited", ip, userAgent, {
+      email: data.email,
+      first_name: data.first_name,
+      last_name: data.last_name,
+    });
+
+    mail
+      .enqueue({
+        type: "worker_welcome",
+        to: data.email,
+        tempPassword,
+      })
+      .catch((err) => console.error("[mail enqueue admin]", err));
+
+    return {
+      user: {
+        id: user.subject,
+        email: user.email,
+        role: user.role,
+        first_name: user.firstName,
+        last_name: user.lastName,
+        profession: user.profession,
+        force_password_change: true,
+      },
+      ...(env.NODE_ENV === "test" ? { temp_password: tempPassword } : {}),
     };
   },
 });

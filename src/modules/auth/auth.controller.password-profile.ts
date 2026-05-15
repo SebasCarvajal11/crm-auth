@@ -1,4 +1,5 @@
 import type { Context } from "hono";
+import { env } from "../../config/env";
 import type { AuthService } from "./auth.service";
 import type { ForgotPasswordRequest, ResetPasswordRequest } from "./auth.schemas";
 import { validatedJson } from "./validated-json";
@@ -12,8 +13,8 @@ export const createPasswordProfileControllerHandlers = (authService: AuthService
 
     return c.json(
       {
-        message: "Si el correo está registrado, recibirás un enlace de recuperación.",
-        ...(result ? { data: { token: result.token } } : {}),
+        message: "Si el correo esta registrado, recibiras un enlace de recuperacion.",
+        ...(env.NODE_ENV === 'test' && result ? { data: { token: result.token } } : {}),
       },
       200
     );
@@ -23,7 +24,7 @@ export const createPasswordProfileControllerHandlers = (authService: AuthService
     const data = validatedJson<ResetPasswordRequest>(c);
     await authService.resetPassword(data.token, data.password, getIp(c), getUa(c));
 
-    return c.json({ message: "Contraseña actualizada correctamente" }, 200);
+    return c.json({ message: "Contrasena actualizada correctamente" }, 200);
   },
 
   me: async (c: Context<AppEnv>) => {
@@ -33,7 +34,7 @@ export const createPasswordProfileControllerHandlers = (authService: AuthService
     return c.json({ data }, 200);
   },
 
-  /** Versión plana de /me — para uso exclusivo del BFF aggregation (sin wrapper `data`). */
+  /** Version plana de /me - para uso exclusivo del BFF aggregation (sin wrapper `data`). */
   meFlat: async (c: Context<AppEnv>) => {
     const { userId } = c.get("user");
     const data = await authService.getMe(userId);

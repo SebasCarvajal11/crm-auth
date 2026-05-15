@@ -1,16 +1,16 @@
-import { and, desc, eq, isNotNull, isNull, lte, sql } from "drizzle-orm";
-import { db } from "../../../db/connection";
+import type { DbOrTx } from "../users.repository";
+import { and, desc, eq, ilike, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
 import { users } from "../../../db/schema";
 import type { NewUser, UserPatch } from "../users.types";
 
-export const usersWriteRepository = {
+export const createUsersWriteRepository = (conn: DbOrTx) => ({
   createUser: async (userData: NewUser) => {
-    const [user] = await db.insert(users).values(userData).returning();
+    const [user] = await conn.insert(users).values(userData).returning();
     return user;
   },
 
   updateUserById: async (id: string, data: UserPatch) => {
-    const [user] = await db
+    const [user] = await conn
       .update(users)
       .set({ ...data, updatedAt: new Date() })
       .where(eq(users.id, id))
@@ -19,7 +19,7 @@ export const usersWriteRepository = {
   },
 
   markSuccessfulLogin: async (userId: string) => {
-    await db
+    await conn
       .update(users)
       .set({
         failedLoginAttempts: 0,
@@ -31,7 +31,7 @@ export const usersWriteRepository = {
   },
 
   clearExpiredAccountLock: async (userId: string) => {
-    await db
+    await conn
       .update(users)
       .set({
         lockedUntil: null,
@@ -52,7 +52,7 @@ export const usersWriteRepository = {
     maxAttempts: number,
     lockoutMs: number
   ) => {
-    const [current] = await db
+    const [current] = await conn
       .select({ n: users.failedLoginAttempts })
       .from(users)
       .where(eq(users.id, userId))
@@ -60,7 +60,7 @@ export const usersWriteRepository = {
     const next = (current?.n ?? 0) + 1;
     const lockedUntil =
       next >= maxAttempts ? new Date(Date.now() + lockoutMs) : undefined;
-    await db
+    await conn
       .update(users)
       .set({
         failedLoginAttempts: next,
@@ -76,6 +76,7 @@ export const usersWriteRepository = {
     limit: number;
     role?: "admin" | "worker" | "client";
     includeDeleted?: boolean;
+    q?: string;
   }) => {
     const offset = (opts.page - 1) * opts.limit;
 
@@ -100,18 +101,29 @@ export const usersWriteRepository = {
     const conditions = [];
     if (!opts.includeDeleted) conditions.push(isNull(users.deletedAt));
     if (opts.role) conditions.push(eq(users.role, opts.role));
+    if (opts.q?.trim()) {
+      const needle = `%${opts.q.trim()}%`;
+      conditions.push(
+        or(
+          ilike(users.email, needle),
+          ilike(users.firstName, needle),
+          ilike(users.lastName, needle),
+          ilike(users.companyName, needle)
+        )
+      );
+    }
     const whereClause = conditions.length ? and(...conditions) : undefined;
 
-    const countBase = db.select({ count: sql<number>`cast(count(*) as int)` }).from(users);
+    const countBase = conn.select({ count: sql<number>`cast(count(*) as int)` }).from(users);
     const [countRow] = whereClause
       ? await countBase.where(whereClause)
       : await countBase;
 
-    const rowsBase = db.select(selection).from(users).orderBy(desc(users.createdAt));
+    const rowsBase = conn.select(selection).from(users).orderBy(desc(users.createdAt));
     const rows = whereClause
       ? await rowsBase.where(whereClause).limit(opts.limit).offset(offset)
       : await rowsBase.limit(opts.limit).offset(offset);
 
     return { rows, total: countRow?.count ?? 0 };
   },
-};
+});

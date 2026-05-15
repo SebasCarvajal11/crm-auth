@@ -1,8 +1,8 @@
-import { db } from "../../../db/connection";
+import type { DbOrTx } from "../users.repository";
 import { auditLogs } from "../../../db/schema";
 import type { AuditDetails } from "../users.types";
 
-export const auditLogsRepository = {
+export const createAuditLogsRepository = (conn: DbOrTx) => ({
   createAuditLog: async (
     userId: string | null,
     action: string,
@@ -10,7 +10,7 @@ export const auditLogsRepository = {
     userAgent: string,
     details?: AuditDetails
   ) => {
-    await db.insert(auditLogs).values({
+    await conn.insert(auditLogs).values({
       userId,
       action,
       ipAddress,
@@ -18,4 +18,4 @@ export const auditLogsRepository = {
       details: details ?? null,
     });
   },
-};
+});

@@ -18,7 +18,7 @@ export const createSessionListingMethods = (repo: UsersRepository) => ({
       }
     }
 
-    return rows.map((r) => ({
+    return rows.map((r: any) => ({
       family: r.family,
       device_label: r.deviceInfo ?? "Dispositivo desconocido",
       expires_at: r.expiresAt.toISOString(),
@@ -35,7 +35,7 @@ export const createSessionListingMethods = (repo: UsersRepository) => ({
     userAgent: string
   ) => {
     const rows = await repo.listActiveSessionFamilies(userId);
-    if (!rows.some((r) => r.family === familyId)) {
+    if (!rows.some((r: any) => r.family === familyId)) {
       throw new NotFoundError("Sesión no encontrada o ya cerrada");
     }
 

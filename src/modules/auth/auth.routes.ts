@@ -1,11 +1,12 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
-import { usersRepository } from "../users/users.repository";
+import { createUsersRepository } from "../users/users.repository";
 import { createAuthService } from "./auth.service";
 import { createAuthController } from "./auth.controller";
 import {
   LoginRequestSchema,
   InviteClientRequestSchema,
+  InviteAdminSchema,
   AcceptInviteRequestSchema,
   RegisterWorkerSchema,
   ForgotPasswordSchema,
@@ -28,7 +29,7 @@ const RefreshFamilyParamSchema = z.object({
 
 // Inyección de Dependencias (authService exportado para rutas admin `/users`)
 export const mailPublisher = createEmailJobPublisher();
-export const authService = createAuthService(usersRepository, mailPublisher);
+export const authService = createAuthService(createUsersRepository(), mailPublisher);
 const authController = createAuthController(authService);
 
 export const authRoutes = new Hono<AppEnv>();
@@ -86,6 +87,14 @@ authRoutes.post(
   requireRole("admin"),
   zValidator("json", RegisterWorkerSchema),
   authController.registerWorker
+);
+
+authRoutes.post(
+  "/invite-admin",
+  authMiddleware,
+  requireRole("admin"),
+  zValidator("json", InviteAdminSchema),
+  authController.inviteAdmin
 );
 
 // ---------------------------------------------------------------------------

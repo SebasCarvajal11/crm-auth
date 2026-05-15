@@ -156,7 +156,6 @@ paths:
                     required: [access_token]
                     properties:
                       access_token:
-                        type: string
         "401":
           $ref: "#/components/responses/Unauthorized"
 
@@ -319,7 +318,7 @@ paths:
               $ref: "#/components/schemas/RegisterWorkerRequest"
       responses:
         "201":
-          description: Usuario creado; en desarrollo puede incluir `temp_password`
+          description: Usuario creado y credenciales iniciales enviadas por correo
           content:
             application/json:
               schema:
@@ -331,9 +330,6 @@ paths:
                     properties:
                       user:
                         $ref: "#/components/schemas/UserStub"
-                      temp_password:
-                        type: string
-                        description: Solo fuera de production
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -343,7 +339,7 @@ paths:
 
   /auth/invite-client:
     post:
-      tags: [Auth — Administración]
+      tags: [Auth - Administracion]
       summary: Invitar cliente por correo (admin)
       security:
         - bearerAuth: []
@@ -356,22 +352,16 @@ paths:
               $ref: "#/components/schemas/InviteClientRequest"
       responses:
         "201":
-          description: Invitación creada; token solo en dev/no production en JSON
+          description: Invitacion creada y correo de acceso encolado para entrega
           content:
             application/json:
               schema:
                 type: object
-                required: [message, data]
+                required: [message]
                 properties:
                   message:
                     type: string
-                    example: Invitación creada
-                  data:
-                    type: object
-                    properties:
-                      token:
-                        type: string
-                        description: Solo en desarrollo / testing
+                    example: Invitacion creada y correo enviado
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -381,8 +371,8 @@ paths:
 
   /auth/accept-invite/{token}:
     get:
-      tags: [Auth — Pública]
-      summary: Datos de la invitación (email)
+      tags: [Auth - Publica]
+      summary: Datos de la invitacion (email)
       operationId: getInvitationData
       parameters:
         - name: token
@@ -412,8 +402,8 @@ paths:
 
   /auth/accept-invite:
     post:
-      tags: [Auth — Pública]
-      summary: Aceptar invitación y crear cuenta cliente
+      tags: [Auth - Publica]
+      summary: Aceptar invitacion y crear cuenta cliente
       operationId: acceptInvite
       requestBody:
         required: true
@@ -446,8 +436,8 @@ paths:
 
   /auth/forgot-password:
     post:
-      tags: [Auth — Pública]
-      summary: Solicitar recuperación de contraseña
+      tags: [Auth - Publica]
+      summary: Solicitar recuperacion de contrasena
       operationId: forgotPassword
       requestBody:
         required: true
@@ -457,7 +447,7 @@ paths:
               $ref: "#/components/schemas/ForgotPasswordRequest"
       responses:
         "200":
-          description: Mensaje genérico; en desarrollo puede incluir token en data
+          description: Mensaje generico e idempotente; nunca expone si el correo existe
           content:
             application/json:
               schema:
@@ -466,17 +456,11 @@ paths:
                 properties:
                   message:
                     type: string
-                  data:
-                    type: object
-                    properties:
-                      token:
-                        type: string
-                        description: Solo en desarrollo
 
   /auth/reset-password:
     post:
-      tags: [Auth — Pública]
-      summary: Restablecer contraseña con token
+      tags: [Auth - Publica]
+      summary: Restablecer contrasena con token
       operationId: resetPassword
       requestBody:
         required: true
@@ -487,7 +471,6 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/MessageSuccess"
-
   /users/:
     get:
       tags: [Usuarios — Admin]
@@ -905,3 +888,5 @@ components:
       properties:
         force_password_change:
           type: boolean
+
+

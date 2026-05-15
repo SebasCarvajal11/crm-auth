@@ -25,6 +25,34 @@ export const createPasswordMethods = (
       return;
     }
 
+    if (env.NODE_ENV !== "test") {
+      const now = Date.now();
+      const latest = await repo.findLatestPasswordResetForUser(user.id);
+      const minIntervalMs = env.PASSWORD_RESET_MIN_INTERVAL_MS;
+      if (latest?.createdAt) {
+        const elapsed = now - latest.createdAt.getTime();
+        if (elapsed < minIntervalMs) {
+          await repo.createAuditLog(user.id, "password_reset_throttled_interval", ip, userAgent, {
+            email,
+            min_interval_ms: minIntervalMs,
+            elapsed_ms: elapsed,
+          });
+          return;
+        }
+      }
+
+      const since = new Date(now - 24 * 60 * 60 * 1000);
+      const issuedInLastDay = await repo.countPasswordResetsForUserSince(user.id, since);
+      if (issuedInLastDay >= env.PASSWORD_RESET_MAX_PER_DAY) {
+        await repo.createAuditLog(user.id, "password_reset_throttled_daily_limit", ip, userAgent, {
+          email,
+          max_per_day: env.PASSWORD_RESET_MAX_PER_DAY,
+          issued_in_last_24h: issuedInLastDay,
+        });
+        return;
+      }
+    }
+
     const rawToken = randomBytes(32).toString("hex");
 
     await repo.createPasswordReset({
@@ -43,7 +71,7 @@ export const createPasswordMethods = (
       })
       .catch((err) => console.error("[mail enqueue forgot]", err));
 
-    return env.NODE_ENV !== "production" ? { token: rawToken } : undefined;
+    return env.NODE_ENV === "test" ? { token: rawToken } : undefined;
   },
 
   resetPassword: async (

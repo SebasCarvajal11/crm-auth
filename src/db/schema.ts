@@ -10,16 +10,16 @@ import {
   integer,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
+import { v7 as uuidv7 } from "uuid";
 
 export const authSchema = pgSchema("schema_auth");
 
 export const roleEnum = authSchema.enum("role", ["admin", "worker", "client"]);
 export const clientKindEnum = authSchema.enum("client_kind", ["natural", "juridical"]);
-
 /** Identidad mínima: credenciales, rol y estado de cuenta (sin perfil CRM ni datos fiscales). */
 export const users = authSchema.table("users", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  subject: uuid("subject").unique().notNull().defaultRandom(),
+  id: uuid("id").primaryKey().$defaultFn(() => uuidv7()),
+  subject: uuid("subject").unique().notNull().$defaultFn(() => uuidv7()),
   email: varchar("email", { length: 255 }).unique().notNull(),
   passwordHash: varchar("password_hash", { length: 255 }).notNull(),
   role: roleEnum("role").notNull(),
@@ -40,7 +40,7 @@ export const users = authSchema.table("users", {
 });
 
 export const refreshTokens = authSchema.table("refresh_tokens", {
-  id: uuid("id").primaryKey().defaultRandom(),
+  id: uuid("id").primaryKey().$defaultFn(() => uuidv7()),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   tokenHash: varchar("token_hash", { length: 255 }).notNull(),
   family: uuid("family").notNull(),
@@ -52,7 +52,7 @@ export const refreshTokens = authSchema.table("refresh_tokens", {
 
 /** Alta de cuenta cliente por email; datos comerciales/fiscales vivirán en mod-users / mod-crm. */
 export const invitations = authSchema.table("invitations", {
-  id: uuid("id").primaryKey().defaultRandom(),
+  id: uuid("id").primaryKey().$defaultFn(() => uuidv7()),
   email: varchar("email", { length: 255 }).notNull(),
   firstName: varchar("first_name", { length: 120 }),
   lastName: varchar("last_name", { length: 120 }),
@@ -66,7 +66,7 @@ export const invitations = authSchema.table("invitations", {
 });
 
 export const passwordResets = authSchema.table("password_resets", {
-  id: uuid("id").primaryKey().defaultRandom(),
+  id: uuid("id").primaryKey().$defaultFn(() => uuidv7()),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   token: varchar("token", { length: 255 }).unique().notNull(),
   expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
@@ -75,7 +75,7 @@ export const passwordResets = authSchema.table("password_resets", {
 });
 
 export const emailVerifications = authSchema.table("email_verifications", {
-  id: uuid("id").primaryKey().defaultRandom(),
+  id: uuid("id").primaryKey().$defaultFn(() => uuidv7()),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   token: varchar("token", { length: 255 }).unique().notNull(),
   expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),

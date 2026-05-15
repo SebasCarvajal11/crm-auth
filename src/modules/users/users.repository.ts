@@ -1,20 +1,35 @@
-import { usersReadRepository } from "./repository/users-read.repository";
-import { usersWriteRepository } from "./repository/users-write.repository";
-import { refreshTokensRepository } from "./repository/refresh-tokens.repository";
-import { invitationsRepository } from "./repository/invitations.repository";
-import { passwordResetsRepository } from "./repository/password-resets.repository";
-import { emailVerificationsRepository } from "./repository/email-verifications.repository";
-import { auditLogsRepository } from "./repository/audit-logs.repository";
+import { db } from "../../db/connection";
+import { createUsersReadRepository } from "./repository/users-read.repository";
+import { createUsersWriteRepository } from "./repository/users-write.repository";
+import { createRefreshTokensRepository } from "./repository/refresh-tokens.repository";
+import { createInvitationsRepository } from "./repository/invitations.repository";
+import { createPasswordResetsRepository } from "./repository/password-resets.repository";
+import { createEmailVerificationsRepository } from "./repository/email-verifications.repository";
+import { createAuditLogsRepository } from "./repository/audit-logs.repository";
 
-/** Aggregado único: todas las queries Drizzle del módulo users viven bajo `repository/`. */
-export const usersRepository = {
-  ...usersReadRepository,
-  ...usersWriteRepository,
-  ...refreshTokensRepository,
-  ...invitationsRepository,
-  ...passwordResetsRepository,
-  ...emailVerificationsRepository,
-  ...auditLogsRepository,
+export type DB = typeof db;
+export type TX = Parameters<Parameters<DB["transaction"]>[0]>[0];
+export type DbOrTx = DB | TX;
+
+export const createUsersRepository = (conn: DbOrTx = db) => {
+  const repo = {
+    ...createUsersReadRepository(conn),
+    ...createUsersWriteRepository(conn),
+    ...createRefreshTokensRepository(conn),
+    ...createInvitationsRepository(conn),
+    ...createPasswordResetsRepository(conn),
+    ...createEmailVerificationsRepository(conn),
+    ...createAuditLogsRepository(conn),
+  };
+
+  return {
+    ...repo,
+    transaction: async <T>(cb: (txRepo: typeof repo) => Promise<T>): Promise<T> => {
+      return conn.transaction(async (tx: any) => {
+        return cb(createUsersRepository(tx));
+      });
+    },
+  };
 };
 
-export type UsersRepository = typeof usersRepository;
+export type UsersRepository = ReturnType<typeof createUsersRepository>;

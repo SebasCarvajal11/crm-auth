@@ -1,20 +1,20 @@
+import type { DbOrTx } from "../users.repository";
 import { and, desc, eq, gt } from "drizzle-orm";
-import { db } from "../../../db/connection";
 import { refreshTokens } from "../../../db/schema";
 
-export const refreshTokensRepository = {
+export const createRefreshTokensRepository = (conn: DbOrTx) => ({
   saveRefreshToken: async (
     data: Pick<
       NonNullable<typeof refreshTokens.$inferInsert>,
       "userId" | "tokenHash" | "family" | "expiresAt" | "deviceInfo"
     >
   ) => {
-    const [token] = await db.insert(refreshTokens).values(data).returning();
+    const [token] = await conn.insert(refreshTokens).values(data).returning();
     return token;
   },
 
   findRefreshToken: async (tokenHash: string) => {
-    const [token] = await db
+    const [token] = await conn
       .select()
       .from(refreshTokens)
       .where(eq(refreshTokens.tokenHash, tokenHash))
@@ -24,7 +24,7 @@ export const refreshTokensRepository = {
 
   /** Token más reciente no revocado de una familia (para grace period). */
   findLatestActiveTokenByFamily: async (familyId: string) => {
-    const [token] = await db
+    const [token] = await conn
       .select()
       .from(refreshTokens)
       .where(
@@ -40,28 +40,28 @@ export const refreshTokensRepository = {
   },
 
   revokeToken: async (tokenId: string) => {
-    await db
+    await conn
       .update(refreshTokens)
       .set({ isRevoked: true })
       .where(eq(refreshTokens.id, tokenId));
   },
 
   revokeTokenFamily: async (familyId: string) => {
-    await db
+    await conn
       .update(refreshTokens)
       .set({ isRevoked: true })
       .where(eq(refreshTokens.family, familyId));
   },
 
   revokeAllRefreshTokensForUser: async (userId: string) => {
-    await db
+    await conn
       .update(refreshTokens)
       .set({ isRevoked: true })
       .where(eq(refreshTokens.userId, userId));
   },
 
   revokeRefreshTokensForUserFamily: async (userId: string, familyId: string) => {
-    await db
+    await conn
       .update(refreshTokens)
       .set({ isRevoked: true })
       .where(
@@ -70,7 +70,7 @@ export const refreshTokensRepository = {
   },
 
   listActiveSessionFamilies: async (userId: string) => {
-    return await db
+    return await conn
       .selectDistinctOn([refreshTokens.family], {
         family: refreshTokens.family,
         deviceInfo: refreshTokens.deviceInfo,
@@ -87,4 +87,4 @@ export const refreshTokensRepository = {
       )
       .orderBy(refreshTokens.family, desc(refreshTokens.createdAt));
   },
-};
+});

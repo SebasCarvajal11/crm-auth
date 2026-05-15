@@ -1,7 +1,9 @@
 import type { Context } from "hono";
+import { env } from "../../config/env";
 import type { AuthService } from "./auth.service";
 import type {
   AcceptInviteRequest,
+  InviteAdminRequest,
   InviteClientRequest,
   RegisterWorkerRequest,
 } from "./auth.schemas";
@@ -18,18 +20,32 @@ export const createInvitesAdminControllerHandlers = (authService: AuthService) =
     return c.json({ data: result }, 201);
   },
 
+  inviteAdmin: async (c: Context<AppEnv>) => {
+    const data = validatedJson<InviteAdminRequest>(c);
+    const { userId } = c.get("user");
+    const result = await authService.inviteAdmin(data, userId, getIp(c), getUa(c));
+
+    return c.json(
+      {
+        message: env.NODE_ENV === "test" ? "Administrador creado" : "Administrador creado y correo enviado",
+        data: result,
+      },
+      201
+    );
+  },
+
   inviteClient: async (c: Context<AppEnv>) => {
     const data = validatedJson<InviteClientRequest>(c);
     const { userId } = c.get("user");
     const result = await authService.inviteClient(data, userId, getIp(c), getUa(c));
 
-    const payload: { message: string; data: { token?: string } } = {
-      message: "Invitación creada",
-      data: {},
-    };
-    if (result.token) payload.data.token = result.token;
-
-    return c.json(payload, 201);
+    return c.json(
+      {
+        message: env.NODE_ENV === 'test' ? 'Invitacion creada' : 'Invitacion creada y correo enviado',
+        ...(env.NODE_ENV === 'test' && result ? { data: { token: result.token } } : {}),
+      },
+      201
+    );
   },
 
   getInvitationData: async (c: Context) => {

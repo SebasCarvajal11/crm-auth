@@ -61,6 +61,13 @@ export const RegisterWorkerSchema = z.object({
   profession: professionField,
 });
 
+export const InviteAdminSchema = z.object({
+  email: z.string().email().max(255),
+  first_name: nameField,
+  last_name: nameField,
+  secret_password: z.string().min(1, "La contraseña secreta es requerida"),
+});
+
 export const ForgotPasswordSchema = z.object({
   email: z.string().email().max(255),
 });
@@ -88,6 +95,7 @@ export type LoginRequest = z.infer<typeof LoginRequestSchema>;
 export type InviteClientRequest = z.infer<typeof InviteClientRequestSchema>;
 export type AcceptInviteRequest = z.infer<typeof AcceptInviteRequestSchema>;
 export type RegisterWorkerRequest = z.infer<typeof RegisterWorkerSchema>;
+export type InviteAdminRequest = z.infer<typeof InviteAdminSchema>;
 export type ForgotPasswordRequest = z.infer<typeof ForgotPasswordSchema>;
 export type ResetPasswordRequest = z.infer<typeof ResetPasswordSchema>;
 export type ChangePasswordRequest = z.infer<typeof ChangePasswordSchema>;

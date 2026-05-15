@@ -5,6 +5,7 @@ export const AdminListUsersQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   role: RoleEnum.optional(),
+  q: z.string().trim().min(1).max(120).optional(),
   /** Si es true, incluye usuarios con soft-delete (`deleted_at`). */
   include_deleted: z.coerce.boolean().optional().default(false),
 });

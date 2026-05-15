@@ -1,10 +1,10 @@
+import type { DbOrTx } from "../users.repository";
 import { and, eq, ilike, inArray, isNull } from "drizzle-orm";
-import { db } from "../../../db/connection";
 import { users } from "../../../db/schema";
 
-export const usersReadRepository = {
+export const createUsersReadRepository = (conn: DbOrTx) => ({
   findByEmail: async (email: string) => {
-    const [user] = await db
+    const [user] = await conn
       .select()
       .from(users)
       .where(and(eq(users.email, email), isNull(users.deletedAt)))
@@ -13,12 +13,12 @@ export const usersReadRepository = {
   },
 
   findByEmailIncludingDeleted: async (email: string) => {
-    const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    const [user] = await conn.select().from(users).where(eq(users.email, email)).limit(1);
     return user ?? null;
   },
 
   findById: async (id: string) => {
-    const [user] = await db
+    const [user] = await conn
       .select()
       .from(users)
       .where(and(eq(users.id, id), isNull(users.deletedAt)))
@@ -27,7 +27,7 @@ export const usersReadRepository = {
   },
 
   findBySubject: async (subject: string) => {
-    const [user] = await db
+    const [user] = await conn
       .select()
       .from(users)
       .where(and(eq(users.subject, subject), isNull(users.deletedAt)))
@@ -36,7 +36,7 @@ export const usersReadRepository = {
   },
 
   findBySubjectIncludingDeleted: async (subject: string) => {
-    const [user] = await db.select().from(users).where(eq(users.subject, subject)).limit(1);
+    const [user] = await conn.select().from(users).where(eq(users.subject, subject)).limit(1);
     return user ?? null;
   },
 
@@ -46,7 +46,7 @@ export const usersReadRepository = {
     role: "admin" | "worker" | "client",
     limit = 15
   ) => {
-    return db
+    return conn
       .select({
         subject: users.subject,
         email:   users.email,
@@ -72,7 +72,7 @@ export const usersReadRepository = {
   /** Busca usuarios activos por lista de subjects (UUIDs). Para enriquecimiento batch. */
   findBySubjects: async (subjects: string[]) => {
     if (!subjects.length) return [];
-    return db
+    return conn
       .select({
         subject: users.subject,
         email:   users.email,
@@ -86,4 +86,4 @@ export const usersReadRepository = {
       .from(users)
       .where(and(isNull(users.deletedAt), inArray(users.subject, subjects)));
   },
-};
+});

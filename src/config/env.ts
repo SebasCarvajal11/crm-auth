@@ -6,6 +6,12 @@ const pemFromEnv = z
   .min(1)
   .transform((s) => s.replace(/\\n/g, "\n").trim());
 
+const envBoolean = (defaultValue: boolean) =>
+  z.preprocess(
+    (v) => (v === "" || v === undefined ? String(defaultValue) : String(v).toLowerCase()),
+    z.union([z.literal("true"), z.literal("false"), z.literal("1"), z.literal("0")])
+  ).transform((v) => v === "true" || v === "1");
+
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL es requerida"),
   /** PKCS#8 PEM (RSA). Firmar access tokens (RS256). No compartir fuera del servicio. */
@@ -31,6 +37,19 @@ const envSchema = z.object({
     .int()
     .positive()
     .default(5 * 60 * 1000), // 5 minutos
+  /** Minimo de tiempo entre solicitudes de reset por cuenta. */
+  PASSWORD_RESET_MIN_INTERVAL_MS: z.coerce
+    .number()
+    .int()
+    .nonnegative()
+    .default(15 * 60 * 1000), // 15 minutos
+  /** Maximo de solicitudes de reset por cuenta en una ventana de 24h. */
+  PASSWORD_RESET_MAX_PER_DAY: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(20)
+    .default(3),
   PORT: z.coerce.number().default(3000),
   /**
    * Si es true y GATEWAY_TRUST_SECRET coincide con la cabecera `X-Gateway-Trust` que inyecta KrakenD,
@@ -58,7 +77,10 @@ const envSchema = z.object({
   SMTP_PORT: z.coerce.number().int().positive().optional(),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
-  SMTP_SECURE: z.coerce.boolean().default(false),
+  SMTP_TLS_SERVERNAME: z.string().optional(),
+  SMTP_SECURE: envBoolean(false),
+  SMTP_REQUIRE_TLS: envBoolean(false),
+  ADMIN_INVITE_SECRET: z.string().min(8).optional(),
   })
   .superRefine((data, ctx) => {
     if (data.TRUST_GATEWAY_JWT_HEADERS && !data.GATEWAY_TRUST_SECRET) {
@@ -82,6 +104,20 @@ const envSchema = z.object({
           code: "custom",
           message: "SMTP_PORT es obligatorio si MAIL_TRANSPORT=smtp",
           path: ["SMTP_PORT"],
+        });
+      }
+      if (!data.SMTP_USER) {
+        ctx.addIssue({
+          code: "custom",
+          message: "SMTP_USER es obligatorio si MAIL_TRANSPORT=smtp",
+          path: ["SMTP_USER"],
+        });
+      }
+      if (!data.SMTP_PASS) {
+        ctx.addIssue({
+          code: "custom",
+          message: "SMTP_PASS es obligatorio si MAIL_TRANSPORT=smtp",
+          path: ["SMTP_PASS"],
         });
       }
     }

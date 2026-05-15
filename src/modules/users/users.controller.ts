@@ -36,7 +36,8 @@ export const createUsersAdminController = (authService: AuthService) => ({
       q.page,
       q.limit,
       q.role,
-      q.include_deleted
+      q.include_deleted,
+      q.q
     );
 
     return c.json({ data: result }, 200);

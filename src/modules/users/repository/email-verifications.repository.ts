@@ -1,16 +1,16 @@
+import type { DbOrTx } from "../users.repository";
 import { eq } from "drizzle-orm";
-import { db } from "../../../db/connection";
 import { emailVerifications } from "../../../db/schema";
 import type { NewEmailVerification } from "../users.types";
 
-export const emailVerificationsRepository = {
+export const createEmailVerificationsRepository = (conn: DbOrTx) => ({
   createEmailVerification: async (data: NewEmailVerification) => {
-    const [row] = await db.insert(emailVerifications).values(data).returning();
+    const [row] = await conn.insert(emailVerifications).values(data).returning();
     return row;
   },
 
   findEmailVerificationByToken: async (token: string) => {
-    const [row] = await db
+    const [row] = await conn
       .select()
       .from(emailVerifications)
       .where(eq(emailVerifications.token, token))
@@ -19,9 +19,9 @@ export const emailVerificationsRepository = {
   },
 
   markEmailVerificationAsUsed: async (id: string) => {
-    await db
+    await conn
       .update(emailVerifications)
       .set({ isUsed: true })
       .where(eq(emailVerifications.id, id));
   },
-};
+});
