@@ -88,7 +88,18 @@ async function main() {
 
     const hurl = runCommand(
       "hurl",
-      ["--test", "--jobs", "1", "--variable", `base_url=${BASE_URL}`, ...HURL_FILES],
+      [
+        "--test",
+        "--jobs",
+        "1",
+        "--connect-timeout",
+        "5s",
+        "--max-time",
+        "30s",
+        "--variable",
+        `base_url=${BASE_URL}`,
+        ...HURL_FILES,
+      ],
       env,
     );
     const [hurlCode] = (await once(hurl, "exit")) as [number | null];
