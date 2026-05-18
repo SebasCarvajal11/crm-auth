@@ -2,7 +2,7 @@
 # 04 — Invitación y aceptación de cliente (solo identidad en mod-auth)
 # ============================================================
 
-POST http://localhost:3000/auth/login
+POST {{base_url}}/auth/login
 Content-Type: application/json
 {
   "email": "admin@cima.dev",
@@ -12,7 +12,7 @@ HTTP 200
 [Captures]
 admin_token: jsonpath "$.data.access_token"
 
-POST http://localhost:3000/auth/invite-client
+POST {{base_url}}/auth/invite-client
 Authorization: Bearer {{admin_token}}
 Content-Type: application/json
 {
@@ -28,7 +28,7 @@ invite_token: jsonpath "$.data.token"
 [Asserts]
 jsonpath "$.message" == "Invitacion creada"
 
-GET http://localhost:3000/auth/accept-invite/{{invite_token}}
+GET {{base_url}}/auth/accept-invite/{{invite_token}}
 HTTP 200
 [Asserts]
 jsonpath "$.data.email" == "cliente@cima.dev"
@@ -37,7 +37,7 @@ jsonpath "$.data.last_name" == "Lopez"
 jsonpath "$.data.client_kind" == "juridical"
 jsonpath "$.data.company_name" == "Cliente SAS"
 
-POST http://localhost:3000/auth/accept-invite
+POST {{base_url}}/auth/accept-invite
 Content-Type: application/json
 {
   "token": "{{invite_token}}",
@@ -51,7 +51,7 @@ jsonpath "$.data.access_token" isString
 jsonpath "$.data.user.role" == "client"
 cookie "refresh_token" exists
 
-POST http://localhost:3000/auth/accept-invite
+POST {{base_url}}/auth/accept-invite
 Content-Type: application/json
 {
   "token": "{{invite_token}}",
@@ -59,7 +59,7 @@ Content-Type: application/json
 }
 HTTP 409
 
-GET http://localhost:3000/auth/me
+GET {{base_url}}/auth/me
 Authorization: Bearer {{client_access_token}}
 HTTP 200
 [Asserts]

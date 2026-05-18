@@ -3,7 +3,7 @@
 # Requiere mod-auth con NODE_ENV=test y EXPOSE_TEMP_PASSWORDS=true
 # ============================================================
 
-POST http://localhost:3000/auth/login
+POST {{base_url}}/auth/login
 Content-Type: application/json
 {
   "email": "admin@cima.dev",
@@ -13,7 +13,7 @@ HTTP 200
 [Captures]
 admin_token: jsonpath "$.data.access_token"
 
-POST http://localhost:3000/auth/register-worker
+POST {{base_url}}/auth/register-worker
 Content-Type: application/json
 {
   "email": "worker@cima.dev",
@@ -23,7 +23,7 @@ Content-Type: application/json
 }
 HTTP 401
 
-POST http://localhost:3000/auth/register-worker
+POST {{base_url}}/auth/register-worker
 Authorization: Bearer {{admin_token}}
 Content-Type: application/json
 {
@@ -43,7 +43,7 @@ jsonpath "$.data.user.last_name" == "Ruiz"
 jsonpath "$.data.user.profession" == "Disenadora"
 jsonpath "$.data.temp_password" isString
 
-POST http://localhost:3000/auth/register-worker
+POST {{base_url}}/auth/register-worker
 Authorization: Bearer {{admin_token}}
 Content-Type: application/json
 {

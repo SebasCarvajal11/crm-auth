@@ -3,7 +3,7 @@
 # ============================================================
 
 # --- Credenciales inválidas (400 / 401) ---
-POST http://localhost:3000/auth/login
+POST {{base_url}}/auth/login
 Content-Type: application/json
 {
   "email": "noexiste@cima.dev",
@@ -14,7 +14,7 @@ HTTP 401
 jsonpath "$.error" exists
 
 # --- Contraseña sin formato mínimo (422 Zod) ---
-POST http://localhost:3000/auth/login
+POST {{base_url}}/auth/login
 Content-Type: application/json
 {
   "email": "admin@cima.dev",
@@ -25,7 +25,7 @@ HTTP 400
 jsonpath "$.error" exists
 
 # --- Login exitoso ---
-POST http://localhost:3000/auth/login
+POST {{base_url}}/auth/login
 Content-Type: application/json
 {
   "email": "admin@cima.dev",

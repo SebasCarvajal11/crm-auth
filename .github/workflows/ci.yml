@@ -52,6 +52,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install Hurl
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y hurl
+
       - name: Create CI env file
         shell: bash
         run: |
@@ -86,45 +92,8 @@ jobs:
       - name: Prepare schema
         run: pnpm db:push
 
-      - name: Start auth server
-        shell: bash
-        run: |
-          pnpm start > auth.log 2>&1 &
-          echo $! > auth.pid
-          for i in {1..30}; do
-            if curl -fsS http://127.0.0.1:3000/health > /dev/null; then
-              exit 0
-            fi
-            sleep 2
-          done
-          echo "auth server did not become healthy"
-          cat auth.log
-          exit 1
+      - name: Run test suite
+        run: pnpm test
 
-      - name: Reset test users
-        run: pnpm exec tsx src/scripts/reset-test-users.ts
-
-      - name: Run Hurl auth suite
-        shell: bash
-        run: |
-          docker run --rm --network host -v "$PWD:/work" -w /work ghcr.io/orange-opensource/hurl:latest \
-            --test --jobs 1 \
-            tests/01_login.hurl \
-            tests/02_me.hurl \
-            tests/03_register_worker.hurl \
-            tests/04_invite_client.hurl \
-            tests/05_refresh_logout.hurl \
-            tests/06_password_reset.hurl \
-            tests/08_rbac.hurl
-
-      - name: Print auth log on failure
-        if: failure()
-        shell: bash
-        run: |
-          test -f auth.log && cat auth.log || true
-
-      - name: Stop auth server
-        if: always()
-        shell: bash
-        run: |
-          test -f auth.pid && kill "$(cat auth.pid)" || true
+      - name: Build production image
+        run: docker build -t crm-auth:ci .

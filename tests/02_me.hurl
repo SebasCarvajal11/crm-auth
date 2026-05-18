@@ -2,7 +2,7 @@
 # 02 — GET /auth/me (solo identidad; sin PATCH de perfil)
 # ============================================================
 
-POST http://localhost:3000/auth/login
+POST {{base_url}}/auth/login
 Content-Type: application/json
 {
   "email": "admin@cima.dev",
@@ -12,10 +12,10 @@ HTTP 200
 [Captures]
 admin_token: jsonpath "$.data.access_token"
 
-GET http://localhost:3000/auth/me
+GET {{base_url}}/auth/me
 HTTP 401
 
-GET http://localhost:3000/auth/me
+GET {{base_url}}/auth/me
 Authorization: Bearer {{admin_token}}
 HTTP 200
 [Asserts]

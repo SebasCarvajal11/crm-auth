@@ -8,7 +8,7 @@
 # ============================================================
 
 # Login -> capturar rt_1 y access token v1
-POST http://localhost:3000/auth/login
+POST {{base_url}}/auth/login
 Content-Type: application/json
 {
   "email": "admin@cima.dev",
@@ -20,7 +20,7 @@ access_token_v1: jsonpath "$.data.access_token"
 rt_1: cookie "refresh_token"
 
 # Primera rotacion: rt_1 -> rt_2
-POST http://localhost:3000/auth/refresh
+POST {{base_url}}/auth/refresh
 [Cookies]
 refresh_token: {{rt_1}}
 HTTP 200
@@ -31,7 +31,7 @@ rt_2: cookie "refresh_token"
 jsonpath "$.data.access_token" isString
 
 # Segunda rotacion: rt_2 -> rt_3
-POST http://localhost:3000/auth/refresh
+POST {{base_url}}/auth/refresh
 [Cookies]
 refresh_token: {{rt_2}}
 HTTP 200
@@ -42,14 +42,14 @@ rt_3: cookie "refresh_token"
 jsonpath "$.data.access_token" isString
 
 # El access token v3 sirve para autenticarse
-GET http://localhost:3000/auth/me
+GET {{base_url}}/auth/me
 Authorization: Bearer {{access_token_v3}}
 HTTP 200
 [Asserts]
 jsonpath "$.data.email" == "admin@cima.dev"
 
 # Logout: revoca rt_3 y vacia el cookie store
-POST http://localhost:3000/auth/logout
+POST {{base_url}}/auth/logout
 Authorization: Bearer {{access_token_v3}}
 [Cookies]
 refresh_token: {{rt_3}}
@@ -58,14 +58,14 @@ HTTP 200
 jsonpath "$.message" matches "^Sesi.n cerrada correctamente$"
 
 # Con el store vacio: /refresh sin cookie -> 401
-POST http://localhost:3000/auth/refresh
+POST {{base_url}}/auth/refresh
 HTTP 401
 [Asserts]
 jsonpath "$.error" exists
 
 # Deteccion de robo: rt_1 fue revocado en la primera rotacion.
 # El store esta vacio -> se envia solo rt_1 -> servidor detecta reuso -> 401
-POST http://localhost:3000/auth/refresh
+POST {{base_url}}/auth/refresh
 [Cookies]
 refresh_token: {{rt_1}}
 HTTP 401

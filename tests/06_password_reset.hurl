@@ -3,7 +3,7 @@
 # ============================================================
 
 # --- Email inexistente → 200 (respuesta idempotente, no revela info) ---
-POST http://localhost:3000/auth/forgot-password
+POST {{base_url}}/auth/forgot-password
 Content-Type: application/json
 {
   "email": "noexiste@cima.dev"
@@ -13,7 +13,7 @@ HTTP 200
 jsonpath "$.message" exists
 
 # --- Solicitar reset para admin ---
-POST http://localhost:3000/auth/forgot-password
+POST {{base_url}}/auth/forgot-password
 Content-Type: application/json
 {
   "email": "admin@cima.dev"
@@ -25,7 +25,7 @@ reset_token: jsonpath "$.data.token"
 jsonpath "$.data.token" isString
 
 # --- Segundo token pendiente (mismo usuario) ---
-POST http://localhost:3000/auth/forgot-password
+POST {{base_url}}/auth/forgot-password
 Content-Type: application/json
 {
   "email": "admin@cima.dev"
@@ -35,7 +35,7 @@ HTTP 200
 alt_reset_token: jsonpath "$.data.token"
 
 # --- Token inválido → 404 ---
-POST http://localhost:3000/auth/reset-password
+POST {{base_url}}/auth/reset-password
 Content-Type: application/json
 {
   "token": "token_invalido_000",
@@ -44,7 +44,7 @@ Content-Type: application/json
 HTTP 404
 
 # --- Contraseña débil → 400 (Zod) ---
-POST http://localhost:3000/auth/reset-password
+POST {{base_url}}/auth/reset-password
 Content-Type: application/json
 {
   "token": "{{reset_token}}",
@@ -53,7 +53,7 @@ Content-Type: application/json
 HTTP 400
 
 # --- Reset exitoso ---
-POST http://localhost:3000/auth/reset-password
+POST {{base_url}}/auth/reset-password
 Content-Type: application/json
 {
   "token": "{{reset_token}}",
@@ -64,7 +64,7 @@ HTTP 200
 jsonpath "$.message" == "Contrasena actualizada correctamente"
 
 # --- Reutilizar token → 409 ---
-POST http://localhost:3000/auth/reset-password
+POST {{base_url}}/auth/reset-password
 Content-Type: application/json
 {
   "token": "{{reset_token}}",
@@ -73,7 +73,7 @@ Content-Type: application/json
 HTTP 409
 
 # --- Otro token pendiente invalidado tras el primer reset ---
-POST http://localhost:3000/auth/reset-password
+POST {{base_url}}/auth/reset-password
 Content-Type: application/json
 {
   "token": "{{alt_reset_token}}",
@@ -82,7 +82,7 @@ Content-Type: application/json
 HTTP 409
 
 # --- Login con nueva contraseña ---
-POST http://localhost:3000/auth/login
+POST {{base_url}}/auth/login
 Content-Type: application/json
 {
   "email": "admin@cima.dev",
@@ -93,7 +93,7 @@ HTTP 200
 new_token: jsonpath "$.data.access_token"
 
 # --- Restaurar contraseña original ---
-POST http://localhost:3000/auth/forgot-password
+POST {{base_url}}/auth/forgot-password
 Content-Type: application/json
 {
   "email": "admin@cima.dev"
@@ -102,7 +102,7 @@ HTTP 200
 [Captures]
 restore_token: jsonpath "$.data.token"
 
-POST http://localhost:3000/auth/reset-password
+POST {{base_url}}/auth/reset-password
 Content-Type: application/json
 {
   "token": "{{restore_token}}",

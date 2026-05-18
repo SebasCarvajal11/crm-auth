@@ -1,7 +1,7 @@
-FROM node:20-alpine
+FROM node:22-alpine
 WORKDIR /app
-RUN corepack enable
-COPY package.json pnpm-lock.yaml ./
+RUN corepack enable && corepack prepare pnpm@11.1.1 --activate
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY tsconfig.json ./
 RUN pnpm install --prod --frozen-lockfile
 COPY src ./src

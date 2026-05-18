@@ -1,10 +1,10 @@
 {
   "name": "crm-auth",
   "type": "module",
+  "packageManager": "pnpm@11.1.1",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "worker:email": "tsx src/workers/email.worker.ts",
-    "worker:email:prod": "tsx src/workers/email.worker.ts",
     "worker:cleanup": "tsx src/workers/token-cleanup.worker.ts",
     "cleanup:tokens": "tsx src/scripts/run-token-cleanup.ts",
     "build": "tsc",
@@ -18,9 +18,10 @@
     "db:partition-audit-migrate": "tsx src/db/scripts/migrate-audit-logs-partitioned.ts",
     "db:ensure-audit-partitions": "tsx src/db/scripts/run-ensure-audit-partitions.ts",
     "jwt:gen-keys": "tsx src/scripts/gen-jwt-keys.ts",
-    "test": "tsx src/scripts/reset-test-users.ts && hurl --test --jobs 1 tests/01_login.hurl tests/02_me.hurl tests/03_register_worker.hurl tests/04_invite_client.hurl tests/05_refresh_logout.hurl tests/06_password_reset.hurl tests/08_rbac.hurl",
+    "test": "tsx src/scripts/run-hurl-suite.ts",
     "test:rate-limit": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-rate-limit.ps1"
   },
+  "description": "Identity and access service for the CIMA CRM multi-repo platform.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/SebasCarvajal11/crm-auth.git"

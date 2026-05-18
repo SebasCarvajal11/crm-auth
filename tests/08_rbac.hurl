@@ -3,7 +3,7 @@
 # Requiere mod-auth con NODE_ENV=test y EXPOSE_TEMP_PASSWORDS=true
 # ============================================================
 
-POST http://localhost:3000/auth/login
+POST {{base_url}}/auth/login
 Content-Type: application/json
 {
   "email": "admin@cima.dev",
@@ -13,7 +13,7 @@ HTTP 200
 [Captures]
 admin_token_rbac: jsonpath "$.data.access_token"
 
-POST http://localhost:3000/auth/register-worker
+POST {{base_url}}/auth/register-worker
 Authorization: Bearer {{admin_token_rbac}}
 Content-Type: application/json
 {
@@ -26,7 +26,7 @@ HTTP 201
 [Captures]
 worker_rbac_temp_password: jsonpath "$.data.temp_password"
 
-POST http://localhost:3000/auth/login
+POST {{base_url}}/auth/login
 Content-Type: application/json
 {
   "email": "worker.rbac@cima.dev",
@@ -36,7 +36,7 @@ HTTP 200
 [Captures]
 worker_token: jsonpath "$.data.access_token"
 
-POST http://localhost:3000/auth/invite-client
+POST {{base_url}}/auth/invite-client
 Authorization: Bearer {{worker_token}}
 Content-Type: application/json
 {
@@ -49,7 +49,7 @@ HTTP 403
 [Asserts]
 jsonpath "$.error" exists
 
-POST http://localhost:3000/auth/register-worker
+POST {{base_url}}/auth/register-worker
 Authorization: Bearer {{worker_token}}
 Content-Type: application/json
 {
@@ -60,7 +60,7 @@ Content-Type: application/json
 }
 HTTP 403
 
-GET http://localhost:3000/auth/me
+GET {{base_url}}/auth/me
 Authorization: Bearer {{worker_token}}
 HTTP 200
 [Asserts]
