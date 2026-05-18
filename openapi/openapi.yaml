@@ -719,32 +719,43 @@ components:
 
     IdentityUser:
       type: object
-      required: [id, email, role, isActive]
+      description: |
+        Identidad expuesta por GET /auth/me (y gateway GET /identity/me).
+        Campos alineados con el allow list del gateway; sin estado de cuenta ni auditoría.
+      required: [id, email, role, force_password_change]
       properties:
         id:
           type: string
           format: uuid
+          description: subject estable del usuario (JWT sub)
         email:
           type: string
           format: email
         role:
           type: string
           enum: [admin, worker, client]
-        isActive:
-          type: boolean
+        first_name:
+          type: string
+          nullable: true
+        last_name:
+          type: string
+          nullable: true
+        client_kind:
+          type: string
+          enum: [natural, juridical]
+          nullable: true
+        company_name:
+          type: string
+          nullable: true
+        profession:
+          type: string
+          nullable: true
         emailVerifiedAt:
           type: string
           format: date-time
           nullable: true
         force_password_change:
           type: boolean
-        last_login_at:
-          type: string
-          format: date-time
-          nullable: true
-        createdAt:
-          type: string
-          format: date-time
 
     ChangePasswordRequest:
       type: object

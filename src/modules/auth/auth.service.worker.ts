@@ -4,8 +4,15 @@ import type { UsersRepository } from "../users/users.repository";
 import type { RegisterWorkerRequest } from "./auth.schemas";
 import type { EmailJobPublisher } from "../../email/transactional-email.types";
 import { env } from "../../config/env";
-import { ConflictError, UnauthorizedError } from "../../shared/middlewares/error-handler.middleware";
+import {
+  BadRequestError,
+  ConflictError,
+  UnauthorizedError,
+} from "../../shared/middlewares/error-handler.middleware";
 import { BCRYPT_ROUNDS } from "./auth.constants";
+
+const mayExposeTempPasswordInResponse = () =>
+  env.NODE_ENV === "test" && env.EXPOSE_TEMP_PASSWORDS;
 
 export const createWorkerRegistrationMethods = (
   repo: UsersRepository,
@@ -30,22 +37,26 @@ export const createWorkerRegistrationMethods = (
     const tempPassword = randomBytes(8).toString("hex");
     const passwordHash = await hash(tempPassword, BCRYPT_ROUNDS);
 
-    const user = await repo.createUser({
-      email: data.email,
-      passwordHash,
-      role: "worker",
-      firstName: data.first_name,
-      lastName: data.last_name,
-      profession: data.profession,
-      emailVerifiedAt: new Date(),
-      forcePasswordChange: true,
-    });
+    const user = await repo.transaction(async (txRepo) => {
+      const created = await txRepo.createUser({
+        email: data.email,
+        passwordHash,
+        role: "worker",
+        firstName: data.first_name,
+        lastName: data.last_name,
+        profession: data.profession,
+        emailVerifiedAt: new Date(),
+        forcePasswordChange: true,
+      });
 
-    await repo.createAuditLog(adminUserId, "worker_registered", ip, userAgent, {
-      email: data.email,
-      first_name: data.first_name,
-      last_name: data.last_name,
-      profession: data.profession,
+      await txRepo.createAuditLog(adminUserId, "worker_registered", ip, userAgent, {
+        email: data.email,
+        first_name: data.first_name,
+        last_name: data.last_name,
+        profession: data.profession,
+      });
+
+      return created;
     });
 
     mail
@@ -66,7 +77,7 @@ export const createWorkerRegistrationMethods = (
         profession: user.profession,
         force_password_change: true,
       },
-      ...(env.NODE_ENV === "test" ? { temp_password: tempPassword } : {}),
+      ...(mayExposeTempPasswordInResponse() ? { temp_password: tempPassword } : {}),
     };
   },
 
@@ -81,7 +92,12 @@ export const createWorkerRegistrationMethods = (
     ip: string,
     userAgent: string
   ) => {
-    if (!env.ADMIN_INVITE_SECRET || data.secret_password !== env.ADMIN_INVITE_SECRET) {
+    if (!env.ADMIN_INVITE_SECRET) {
+      throw new BadRequestError(
+        "La funcionalidad de invitación de administradores no está configurada"
+      );
+    }
+    if (data.secret_password !== env.ADMIN_INVITE_SECRET) {
       throw new UnauthorizedError("Contraseña secreta inválida para invitar administradores");
     }
 
@@ -98,20 +114,24 @@ export const createWorkerRegistrationMethods = (
     const tempPassword = randomBytes(8).toString("hex");
     const passwordHash = await hash(tempPassword, BCRYPT_ROUNDS);
 
-    const user = await repo.createUser({
-      email: data.email,
-      passwordHash,
-      role: "admin",
-      firstName: data.first_name,
-      lastName: data.last_name,
-      emailVerifiedAt: new Date(),
-      forcePasswordChange: true,
-    });
+    const user = await repo.transaction(async (txRepo) => {
+      const created = await txRepo.createUser({
+        email: data.email,
+        passwordHash,
+        role: "admin",
+        firstName: data.first_name,
+        lastName: data.last_name,
+        emailVerifiedAt: new Date(),
+        forcePasswordChange: true,
+      });
 
-    await repo.createAuditLog(adminUserId, "admin_invited", ip, userAgent, {
-      email: data.email,
-      first_name: data.first_name,
-      last_name: data.last_name,
+      await txRepo.createAuditLog(adminUserId, "admin_invited", ip, userAgent, {
+        email: data.email,
+        first_name: data.first_name,
+        last_name: data.last_name,
+      });
+
+      return created;
     });
 
     mail
@@ -132,7 +152,7 @@ export const createWorkerRegistrationMethods = (
         profession: user.profession,
         force_password_change: true,
       },
-      ...(env.NODE_ENV === "test" ? { temp_password: tempPassword } : {}),
+      ...(mayExposeTempPasswordInResponse() ? { temp_password: tempPassword } : {}),
     };
   },
 });

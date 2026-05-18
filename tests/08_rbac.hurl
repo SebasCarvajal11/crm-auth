@@ -1,5 +1,6 @@
 # ============================================================
 # 08 — Control de Acceso por Rol (RBAC)
+# Requiere mod-auth con NODE_ENV=test y EXPOSE_TEMP_PASSWORDS=true
 # ============================================================
 
 POST http://localhost:3000/auth/login

@@ -24,6 +24,16 @@ reset_token: jsonpath "$.data.token"
 [Asserts]
 jsonpath "$.data.token" isString
 
+# --- Segundo token pendiente (mismo usuario) ---
+POST http://localhost:3000/auth/forgot-password
+Content-Type: application/json
+{
+  "email": "admin@cima.dev"
+}
+HTTP 200
+[Captures]
+alt_reset_token: jsonpath "$.data.token"
+
 # --- Token inválido → 404 ---
 POST http://localhost:3000/auth/reset-password
 Content-Type: application/json
@@ -51,13 +61,22 @@ Content-Type: application/json
 }
 HTTP 200
 [Asserts]
-jsonpath "$.message" == "Contraseña actualizada correctamente"
+jsonpath "$.message" == "Contrasena actualizada correctamente"
 
 # --- Reutilizar token → 409 ---
 POST http://localhost:3000/auth/reset-password
 Content-Type: application/json
 {
   "token": "{{reset_token}}",
+  "password": "OtraPass456!"
+}
+HTTP 409
+
+# --- Otro token pendiente invalidado tras el primer reset ---
+POST http://localhost:3000/auth/reset-password
+Content-Type: application/json
+{
+  "token": "{{alt_reset_token}}",
   "password": "OtraPass456!"
 }
 HTTP 409

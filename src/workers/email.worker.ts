@@ -1,5 +1,5 @@
 /**
- * Worker BullMQ — proceso aparte: `npm run worker:email`
+ * Worker BullMQ — proceso aparte: `pnpm worker:email`
  * Requiere REDIS_URL y variables de correo (ver `env.ts`).
  */
 import { Worker } from "bullmq";

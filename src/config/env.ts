@@ -52,6 +52,11 @@ const envSchema = z.object({
     .default(3),
   PORT: z.coerce.number().default(3000),
   /**
+   * Path del cookie httpOnly de refresh. Debe coincidir con la ruta que usa el navegador
+   * (SPA con prefijo /api: /api/auth/refresh). Si llamas a mod-auth en :3000 sin proxy, usa /auth/refresh.
+   */
+  REFRESH_COOKIE_PATH: z.string().min(1).default("/api/auth/refresh"),
+  /**
    * Si es true y GATEWAY_TRUST_SECRET coincide con la cabecera `X-Gateway-Trust` que inyecta KrakenD,
    * `authMiddleware` confía en los claims propagados (X-User-*) y omite verificar de nuevo el JWT.
    * Desactivado por defecto (doble verificación RS256: gateway + mod-auth).
@@ -69,6 +74,11 @@ const envSchema = z.object({
   /** Secreto compartido con KrakenD (Martian `X-Gateway-Trust`). Obligatorio si TRUST_GATEWAY_JWT_HEADERS. */
   GATEWAY_TRUST_SECRET: z.string().min(32).optional(),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+  /**
+   * Solo para suites automatizadas locales: incluir `temp_password` en register-worker / invite-admin.
+   * Requiere además NODE_ENV=test. Nunca activar en entornos accesibles.
+   */
+  EXPOSE_TEMP_PASSWORDS: envBoolean(false),
   /** URLs en correos (SPA): reset e invitación. */
   APP_PUBLIC_URL: z.string().url().default("http://localhost:5173"),
   MAIL_FROM: z.string().min(3).default("CIMA CRM <noreply@localhost>"),
@@ -81,6 +91,14 @@ const envSchema = z.object({
   SMTP_SECURE: envBoolean(false),
   SMTP_REQUIRE_TLS: envBoolean(false),
   ADMIN_INVITE_SECRET: z.string().min(8).optional(),
+  /** Días de retención de tokens usados/revocados antes de borrarlos. */
+  TOKEN_CLEANUP_RETENTION_DAYS: z.coerce.number().int().min(1).max(365).default(30),
+  /** Intervalo del worker de limpieza (ms). Por defecto 24 h. */
+  TOKEN_CLEANUP_INTERVAL_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(24 * 60 * 60 * 1000),
   })
   .superRefine((data, ctx) => {
     if (data.TRUST_GATEWAY_JWT_HEADERS && !data.GATEWAY_TRUST_SECRET) {

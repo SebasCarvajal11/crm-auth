@@ -1,12 +1,13 @@
 /**
- * Seed de desarrollo — crea usuarios de prueba realistas.
- * Uso: npx tsx src/db/seed.ts
+ * Seed de desarrollo: crea usuarios de prueba realistas.
+ * Uso: pnpm db:seed
  */
 import { hash } from "bcrypt";
 import "dotenv/config";
 import { db } from "./connection";
 import { users } from "./schema";
 
+const ADMIN_PASSWORD = "Admin123!";
 const DEFAULT_PASSWORD = "Demo123!";
 
 interface UserSeed {
@@ -16,49 +17,43 @@ interface UserSeed {
 }
 
 const USERS_TO_SEED: UserSeed[] = [
-  // Administradores (3)
   { email: "admin@cima.dev", role: "admin", name: "Carlos Mendoza" },
-  { email: "director@cima.dev", role: "admin", name: "María Elena García" },
-  { email: "gerente@cima.dev", role: "admin", name: "Roberto Jiménez" },
-
-  // Trabajadores - Diseñadores (4)
-  { email: "ana.martinez@cima.dev", role: "worker", name: "Ana Martínez" },
-  { email: "luis.rodriguez@cima.dev", role: "worker", name: "Luis Rodríguez" },
-  { email: "sofia.herrera@cima.dev", role: "worker", name: "Sofía Herrera" },
+  { email: "director@cima.dev", role: "admin", name: "Maria Elena Garcia" },
+  { email: "gerente@cima.dev", role: "admin", name: "Roberto Jimenez" },
+  { email: "ana.martinez@cima.dev", role: "worker", name: "Ana Martinez" },
+  { email: "luis.rodriguez@cima.dev", role: "worker", name: "Luis Rodriguez" },
+  { email: "sofia.herrera@cima.dev", role: "worker", name: "Sofia Herrera" },
   { email: "diego.morales@cima.dev", role: "worker", name: "Diego Morales" },
-
-  // Trabajadores - Desarrolladores (3)
-  { email: "pedro.sanchez@cima.dev", role: "worker", name: "Pedro Sánchez" },
-  { email: "laura.gomez@cima.dev", role: "worker", name: "Laura Gómez" },
+  { email: "pedro.sanchez@cima.dev", role: "worker", name: "Pedro Sanchez" },
+  { email: "laura.gomez@cima.dev", role: "worker", name: "Laura Gomez" },
   { email: "miguel.torres@cima.dev", role: "worker", name: "Miguel Torres" },
-
-  // Trabajadores - Marketing (3)
   { email: "carmen.vega@cima.dev", role: "worker", name: "Carmen Vega" },
-  { email: "andres.luna@cima.dev", role: "worker", name: "Andrés Luna" },
-  { email: "valentina.rios@cima.dev", role: "worker", name: "Valentina Ríos" },
-
-  // Clientes (12)
+  { email: "andres.luna@cima.dev", role: "worker", name: "Andres Luna" },
+  { email: "valentina.rios@cima.dev", role: "worker", name: "Valentina Rios" },
   { email: "contacto@restauranteelbuensabor.com", role: "client", name: "Restaurante El Buen Sabor" },
-  { email: "marketing@tecnologiasavanzadas.co", role: "client", name: "Tecnologías Avanzadas S.A." },
+  { email: "marketing@tecnologiasavanzadas.co", role: "client", name: "Tecnologias Avanzadas S.A." },
   { email: "info@modabella.com", role: "client", name: "Moda Bella Boutique" },
-  { email: "ventas@constructorasolida.com", role: "client", name: "Constructora Sólida" },
-  { email: "contacto@clinicasalud360.com", role: "client", name: "Clínica Salud 360" },
+  { email: "ventas@constructorasolida.com", role: "client", name: "Constructora Solida" },
+  { email: "contacto@clinicasalud360.com", role: "client", name: "Clinica Salud 360" },
   { email: "admin@gimnasiopower.fit", role: "client", name: "Gimnasio Power Fitness" },
-  { email: "info@cafeteriaaroma.com", role: "client", name: "Cafetería Aroma" },
-  { email: "gerencia@automotrizrapido.com", role: "client", name: "Automotriz Rápido" },
-  { email: "contacto@academiaexito.edu", role: "client", name: "Academia Éxito" },
-  { email: "ventas@joyeriaplata.com", role: "client", name: "Joyería Plata & Oro" },
-  { email: "info@hotelparaiso.com", role: "client", name: "Hotel Paraíso" },
+  { email: "info@cafeteriaaroma.com", role: "client", name: "Cafeteria Aroma" },
+  { email: "gerencia@automotrizrapido.com", role: "client", name: "Automotriz Rapido" },
+  { email: "contacto@academiaexito.edu", role: "client", name: "Academia Exito" },
+  { email: "ventas@joyeriaplata.com", role: "client", name: "Joyeria Plata & Oro" },
+  { email: "info@hotelparaiso.com", role: "client", name: "Hotel Paraiso" },
   { email: "marketing@deportesextreme.co", role: "client", name: "Deportes Extreme" },
 ];
 
 async function seed() {
-  console.log("🌱 Iniciando seed de usuarios...\n");
+  console.log("Iniciando seed de usuarios...\n");
 
-  const passwordHash = await hash(DEFAULT_PASSWORD, 12);
+  const adminPasswordHash = await hash(ADMIN_PASSWORD, 12);
+  const defaultPasswordHash = await hash(DEFAULT_PASSWORD, 12);
   const createdUsers: Array<{ email: string; subject: string; role: string }> = [];
 
   for (const user of USERS_TO_SEED) {
+    const passwordHash = user.email === "admin@cima.dev" ? adminPasswordHash : defaultPasswordHash;
+
     try {
       const [created] = await db
         .insert(users)
@@ -73,31 +68,29 @@ async function seed() {
 
       if (created) {
         createdUsers.push(created);
-        const roleIcon = user.role === "admin" ? "👑" : user.role === "worker" ? "👷" : "👤";
-        console.log(`✅ ${roleIcon} ${user.name} (${user.email})`);
+        console.log(`Creado: ${user.email} (${user.role})`);
       } else {
-        console.log(`⏭️  Ya existe: ${user.email}`);
+        console.log(`Ya existe: ${user.email}`);
       }
     } catch (error) {
-      console.error(`❌ Error creando ${user.email}:`, error);
+      console.error(`Error creando ${user.email}:`, error);
     }
   }
 
-  console.log("\n📊 Resumen:");
-  console.log(`   Total usuarios creados: ${createdUsers.length}`);
-  console.log(`   Admins: ${createdUsers.filter((u) => u.role === "admin").length}`);
-  console.log(`   Workers: ${createdUsers.filter((u) => u.role === "worker").length}`);
-  console.log(`   Clients: ${createdUsers.filter((u) => u.role === "client").length}`);
-  console.log(`\n🔑 Contraseña para todos: ${DEFAULT_PASSWORD}`);
-
-  // Exportar los subjects para usar en mod-collab
-  console.log("\n📋 Subjects de usuarios (para mod-collab):");
+  console.log("\nResumen:");
+  console.log(`  Total usuarios creados: ${createdUsers.length}`);
+  console.log(`  Admins: ${createdUsers.filter((u) => u.role === "admin").length}`);
+  console.log(`  Workers: ${createdUsers.filter((u) => u.role === "worker").length}`);
+  console.log(`  Clients: ${createdUsers.filter((u) => u.role === "client").length}`);
+  console.log(`\nClave admin de referencia: ${ADMIN_PASSWORD}`);
+  console.log(`Clave general de referencia: ${DEFAULT_PASSWORD}`);
+  console.log("\nSubjects de usuarios:");
   console.log(JSON.stringify(createdUsers, null, 2));
 
   process.exit(0);
 }
 
 seed().catch((err) => {
-  console.error("❌ Error en seed:", err);
+  console.error("Error en seed:", err);
   process.exit(1);
 });

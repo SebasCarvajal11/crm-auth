@@ -1,4 +1,4 @@
-import type { UsersRepository } from "../users/users.repository";
+import type { ActiveSessionFamilyRow, UsersRepository } from "../users/users.repository";
 import { NotFoundError } from "../../shared/middlewares/error-handler.middleware";
 import { hashRefreshToken } from "./auth.token-utils";
 
@@ -18,7 +18,7 @@ export const createSessionListingMethods = (repo: UsersRepository) => ({
       }
     }
 
-    return rows.map((r: any) => ({
+    return rows.map((r: ActiveSessionFamilyRow) => ({
       family: r.family,
       device_label: r.deviceInfo ?? "Dispositivo desconocido",
       expires_at: r.expiresAt.toISOString(),
@@ -35,7 +35,7 @@ export const createSessionListingMethods = (repo: UsersRepository) => ({
     userAgent: string
   ) => {
     const rows = await repo.listActiveSessionFamilies(userId);
-    if (!rows.some((r: any) => r.family === familyId)) {
+    if (!rows.some((r: ActiveSessionFamilyRow) => r.family === familyId)) {
       throw new NotFoundError("Sesión no encontrada o ya cerrada");
     }
 

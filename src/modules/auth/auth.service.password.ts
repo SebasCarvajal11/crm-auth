@@ -98,6 +98,8 @@ export const createPasswordMethods = (
     });
     await repo.revokeAllRefreshTokensForUser(resetRecord.userId);
     await repo.markPasswordResetAsUsed(resetRecord.id);
+    await repo.invalidateUnusedPasswordResetsForUser(resetRecord.userId);
+    await repo.invalidateUnusedEmailVerificationsForUser(resetRecord.userId);
 
     await repo.createAuditLog(resetRecord.userId, "password_reset_completed", ip, userAgent);
   },
@@ -127,6 +129,8 @@ export const createPasswordMethods = (
       forcePasswordChange: false,
     });
     await repo.revokeAllRefreshTokensForUser(userId);
+    await repo.invalidateUnusedPasswordResetsForUser(userId);
+    await repo.invalidateUnusedEmailVerificationsForUser(userId);
     await repo.createAuditLog(userId, "password_changed_known_old", ip, userAgent);
   },
 });

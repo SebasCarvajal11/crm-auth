@@ -4,7 +4,7 @@ import { NotFoundError } from "../../shared/middlewares/error-handler.middleware
 /** Solo lectura de identidad; perfil UI/CRM en mod-users. */
 export const createIdentityReadMethods = (repo: UsersRepository) => ({
   getMe: async (userId: string) => {
-    const user = await repo.findById(userId);
+    const user = await repo.findIdentityMeById(userId);
     if (!user) throw new NotFoundError("Usuario no encontrado");
 
     return {
@@ -16,11 +16,8 @@ export const createIdentityReadMethods = (repo: UsersRepository) => ({
       client_kind: user.clientKind,
       company_name: user.companyName,
       profession: user.profession,
-      isActive: user.isActive,
       emailVerifiedAt: user.emailVerifiedAt,
       force_password_change: user.forcePasswordChange,
-      last_login_at: user.lastLoginAt?.toISOString() ?? null,
-      createdAt: user.createdAt,
     };
   },
 });

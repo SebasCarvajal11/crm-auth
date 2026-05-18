@@ -1,5 +1,6 @@
 # ============================================================
 # 03 — POST /auth/register-worker  (solo Admin)
+# Requiere mod-auth con NODE_ENV=test y EXPOSE_TEMP_PASSWORDS=true
 # ============================================================
 
 POST http://localhost:3000/auth/login

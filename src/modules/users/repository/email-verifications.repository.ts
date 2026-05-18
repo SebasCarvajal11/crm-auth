@@ -1,5 +1,5 @@
 import type { DbOrTx } from "../users.repository";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { emailVerifications } from "../../../db/schema";
 import type { NewEmailVerification } from "../users.types";
 
@@ -23,5 +23,14 @@ export const createEmailVerificationsRepository = (conn: DbOrTx) => ({
       .update(emailVerifications)
       .set({ isUsed: true })
       .where(eq(emailVerifications.id, id));
+  },
+
+  invalidateUnusedEmailVerificationsForUser: async (userId: string) => {
+    await conn
+      .update(emailVerifications)
+      .set({ isUsed: true })
+      .where(
+        and(eq(emailVerifications.userId, userId), eq(emailVerifications.isUsed, false)),
+      );
   },
 });

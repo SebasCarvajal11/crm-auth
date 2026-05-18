@@ -1,6 +1,5 @@
 import { Queue } from "bullmq";
-import Redis from "ioredis";
-import { env } from "../config/env";
+import { getRedisConnection } from "../shared/redis";
 import { sendTransactionalEmail } from "../email/mailer";
 import type {
   EmailJobPublisher,
@@ -9,22 +8,11 @@ import type {
 
 const QUEUE_NAME = "mod-auth-email";
 
-let sharedConnection: Redis | undefined;
 let emailQueue: Queue<TransactionalEmailJob> | undefined;
-
-const getSharedConnection = (): Redis | undefined => {
-  if (!env.REDIS_URL) return undefined;
-  if (!sharedConnection) {
-    sharedConnection = new Redis(env.REDIS_URL, {
-      maxRetriesPerRequest: null,
-    });
-  }
-  return sharedConnection;
-};
 
 /** Cola BullMQ (comparte Redis con rate limit y el worker). */
 export const getEmailQueue = (): Queue<TransactionalEmailJob> | undefined => {
-  const conn = getSharedConnection();
+  const conn = getRedisConnection();
   if (!conn) return undefined;
   if (!emailQueue) {
     emailQueue = new Queue<TransactionalEmailJob>(QUEUE_NAME, {

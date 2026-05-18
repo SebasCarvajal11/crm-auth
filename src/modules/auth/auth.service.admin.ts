@@ -1,4 +1,8 @@
-import type { UsersRepository } from "../users/users.repository";
+import type {
+  AdminUserListRow,
+  UserPublicProfileRow,
+  UsersRepository,
+} from "../users/users.repository";
 import {
   NotFoundError,
   ConflictError,
@@ -12,7 +16,7 @@ export const createAdminUserMethods = (repo: UsersRepository) => ({
     role: "admin" | "worker" | "client" = "client"
   ) => {
     const rows = await repo.searchActiveByEmailAndRole(q, role);
-    return rows.map((u: any) => ({
+    return rows.map((u: UserPublicProfileRow) => ({
       subject: u.subject,
       email: u.email,
       role: u.role,
@@ -26,7 +30,7 @@ export const createAdminUserMethods = (repo: UsersRepository) => ({
 
   getUsersBySubjects: async (subjects: string[]) => {
     const rows = await repo.findBySubjects(subjects);
-    return rows.map((u: any) => ({
+    return rows.map((u: UserPublicProfileRow) => ({
       subject: u.subject,
       email: u.email,
       role: u.role,
@@ -54,7 +58,7 @@ export const createAdminUserMethods = (repo: UsersRepository) => ({
     });
     const totalPages = total === 0 ? 0 : Math.ceil(total / limit);
     return {
-      items: rows.map((u: any) => ({
+      items: rows.map((u: AdminUserListRow) => ({
         id: u.subject,
         email: u.email,
         role: u.role,
@@ -160,7 +164,7 @@ export const createAdminUserMethods = (repo: UsersRepository) => ({
     if (!target) throw new NotFoundError("Usuario no encontrado");
     if (!target.deletedAt) throw new ConflictError("La cuenta no está archivada");
 
-    await repo.updateUserById(target.id, { deletedAt: null });
+    await repo.updateUserById(target.id, { deletedAt: null, isActive: true });
     await repo.createAuditLog(adminUserId, "user_restored", ip, userAgent, {
       target_subject: targetSubject,
     });

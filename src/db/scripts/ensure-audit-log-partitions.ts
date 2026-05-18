@@ -47,7 +47,7 @@ export async function ensureAuditLogPartitions(pool: Pool): Promise<void> {
   if (!kind) return;
   if (kind !== "p") {
     console.warn(
-      "[audit_logs] La tabla no está particionada (relkind ≠ p). Ejecuta: npm run db:partition-audit-migrate"
+      "[audit_logs] La tabla no está particionada (relkind ≠ p). Ejecuta: pnpm db:partition-audit-migrate"
     );
     return;
   }

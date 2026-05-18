@@ -47,4 +47,11 @@ export const createPasswordResetsRepository = (conn: DbOrTx) => ({
       .set({ isUsed: true })
       .where(eq(passwordResets.id, id));
   },
+
+  invalidateUnusedPasswordResetsForUser: async (userId: string) => {
+    await conn
+      .update(passwordResets)
+      .set({ isUsed: true })
+      .where(and(eq(passwordResets.userId, userId), eq(passwordResets.isUsed, false)));
+  },
 });

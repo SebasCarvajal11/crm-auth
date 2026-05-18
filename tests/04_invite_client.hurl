@@ -26,7 +26,7 @@ HTTP 201
 [Captures]
 invite_token: jsonpath "$.data.token"
 [Asserts]
-jsonpath "$.message" == "Invitación creada"
+jsonpath "$.message" == "Invitacion creada"
 
 GET http://localhost:3000/auth/accept-invite/{{invite_token}}
 HTTP 200

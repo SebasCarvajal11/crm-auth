@@ -1,14 +1,15 @@
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import type { Context } from "hono";
+import { env } from "../../config/env";
 
-export const REFRESH_COOKIE_PATH = "/auth/refresh";
+export const REFRESH_COOKIE_PATH = env.REFRESH_COOKIE_PATH;
 export const REFRESH_COOKIE_MAX_AGE = 7 * 24 * 60 * 60;
 
 export const setRefreshCookie = (c: Context, token: string) => {
   setCookie(c, "refresh_token", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "Strict",
+    sameSite: "Lax",
     path: REFRESH_COOKIE_PATH,
     maxAge: REFRESH_COOKIE_MAX_AGE,
   });

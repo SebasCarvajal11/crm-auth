@@ -1,13 +1,15 @@
 {
-  "name": "mod-auth",
+  "name": "crm-auth",
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "worker:email": "tsx src/workers/email.worker.ts",
     "worker:email:prod": "tsx src/workers/email.worker.ts",
+    "worker:cleanup": "tsx src/workers/token-cleanup.worker.ts",
+    "cleanup:tokens": "tsx src/scripts/run-token-cleanup.ts",
     "build": "tsc",
     "start": "tsx src/server.ts",
-    "preinstall": "npx only-allow pnpm",
+    "preinstall": "pnpm dlx only-allow pnpm",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
@@ -17,8 +19,16 @@
     "db:ensure-audit-partitions": "tsx src/db/scripts/run-ensure-audit-partitions.ts",
     "jwt:gen-keys": "tsx src/scripts/gen-jwt-keys.ts",
     "test": "tsx src/scripts/reset-test-users.ts && hurl --test --jobs 1 tests/01_login.hurl tests/02_me.hurl tests/03_register_worker.hurl tests/04_invite_client.hurl tests/05_refresh_logout.hurl tests/06_password_reset.hurl tests/08_rbac.hurl",
-    "test:rate-limit": "hurl --test tests/07_rate_limit.hurl"
+    "test:rate-limit": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-rate-limit.ps1"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SebasCarvajal11/crm-auth.git"
+  },
+  "bugs": {
+    "url": "https://github.com/SebasCarvajal11/crm-auth/issues"
+  },
+  "homepage": "https://github.com/SebasCarvajal11/crm-auth#readme",
   "dependencies": {
     "@hono/node-server": "^1.19.14",
     "@hono/zod-validator": "^0.8.0",

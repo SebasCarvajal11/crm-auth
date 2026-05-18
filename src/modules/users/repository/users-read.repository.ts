@@ -26,6 +26,27 @@ export const createUsersReadRepository = (conn: DbOrTx) => ({
     return user ?? null;
   },
 
+  /** Campos expuestos por GET /identity/me (alineado con allow list del gateway). */
+  findIdentityMeById: async (id: string) => {
+    const [user] = await conn
+      .select({
+        subject: users.subject,
+        email: users.email,
+        role: users.role,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        clientKind: users.clientKind,
+        companyName: users.companyName,
+        profession: users.profession,
+        emailVerifiedAt: users.emailVerifiedAt,
+        forcePasswordChange: users.forcePasswordChange,
+      })
+      .from(users)
+      .where(and(eq(users.id, id), isNull(users.deletedAt)))
+      .limit(1);
+    return user ?? null;
+  },
+
   findBySubject: async (subject: string) => {
     const [user] = await conn
       .select()

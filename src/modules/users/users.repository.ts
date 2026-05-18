@@ -6,6 +6,7 @@ import { createInvitationsRepository } from "./repository/invitations.repository
 import { createPasswordResetsRepository } from "./repository/password-resets.repository";
 import { createEmailVerificationsRepository } from "./repository/email-verifications.repository";
 import { createAuditLogsRepository } from "./repository/audit-logs.repository";
+import { createTokenCleanupRepository } from "./repository/token-cleanup.repository";
 
 export type DB = typeof db;
 export type TX = Parameters<Parameters<DB["transaction"]>[0]>[0];
@@ -20,6 +21,7 @@ export const createUsersRepository = (conn: DbOrTx = db) => {
     ...createPasswordResetsRepository(conn),
     ...createEmailVerificationsRepository(conn),
     ...createAuditLogsRepository(conn),
+    ...createTokenCleanupRepository(conn),
   };
 
   return {
@@ -33,3 +35,15 @@ export const createUsersRepository = (conn: DbOrTx = db) => {
 };
 
 export type UsersRepository = ReturnType<typeof createUsersRepository>;
+
+export type ActiveSessionFamilyRow = Awaited<
+  ReturnType<UsersRepository["listActiveSessionFamilies"]>
+>[number];
+
+export type UserPublicProfileRow = Awaited<
+  ReturnType<UsersRepository["searchActiveByEmailAndRole"]>
+>[number];
+
+export type AdminUserListRow = Awaited<
+  ReturnType<UsersRepository["listUsersPaginated"]>
+>["rows"][number];

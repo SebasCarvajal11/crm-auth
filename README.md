@@ -1,3 +1,7 @@
+## CRM Auth
+
+Servicio de identidad y acceso de CIMA CRM.
+
 ## Desarrollo
 
 ```bash
@@ -5,16 +9,35 @@ pnpm install
 pnpm dev
 ```
 
-## Worker de correo
+Health check: `http://localhost:3000/health`
+
+JWKS: `http://localhost:3000/.well-known/jwks.json`
+
+## Workers
 
 ```bash
 pnpm worker:email
+pnpm worker:cleanup
+```
+
+Limpieza puntual de tokens:
+
+```bash
+pnpm cleanup:tokens
 ```
 
 ## Variables de entorno
 
-Parte de `mod-auth/.env.example` y define al menos:
+Parte de `.env.example` y define al menos:
 
+- `DATABASE_URL`
+- `PORT`
+- `REDIS_URL`
+- `JWT_PRIVATE_KEY`
+- `JWT_PUBLIC_KEY`
+- `JWT_KID`
+- `TRUST_GATEWAY_JWT_HEADERS`
+- `GATEWAY_TRUST_SECRET`
 - `APP_PUBLIC_URL`
 - `MAIL_FROM`
 - `MAIL_TRANSPORT=smtp`
@@ -25,7 +48,21 @@ Parte de `mod-auth/.env.example` y define al menos:
 - `SMTP_TLS_SERVERNAME`
 - `SMTP_USER`
 - `SMTP_PASS`
-- `PASSWORD_RESET_MIN_INTERVAL_MS`
-- `PASSWORD_RESET_MAX_PER_DAY`
 
-En Brevo sobre puerto `587`, usa `SMTP_SECURE=false`, `SMTP_REQUIRE_TLS=true` y `SMTP_TLS_SERVERNAME=smtp-relay.sendinblue.com`.
+## Base de datos
+
+```bash
+pnpm db:push
+pnpm db:seed
+pnpm db:studio
+```
+
+## Pruebas
+
+```bash
+pnpm build
+pnpm test
+pnpm test:rate-limit
+```
+
+Para los Hurl locales que requieren contraseñas temporales, usa `NODE_ENV=test` y `EXPOSE_TEMP_PASSWORDS=true` solo durante la ejecución de pruebas.

@@ -73,6 +73,7 @@ authRoutes.post(
 
 authRoutes.post(
   "/verify-email",
+  ipRateLimit({ maxAttempts: 10, windowMs: 60 * 60 * 1000 }),
   zValidator("json", VerifyEmailSchema),
   authController.verifyEmail
 );
