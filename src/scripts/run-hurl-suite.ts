@@ -25,6 +25,7 @@ function runCommand(
     env,
     stdio,
     shell: process.platform === "win32",
+    detached: process.platform !== "win32",
     windowsHide: true,
   });
 }
@@ -53,8 +54,25 @@ async function terminateProcess(child: ReturnType<typeof spawn>) {
     return;
   }
 
-  child.kill("SIGTERM");
-  await once(child, "exit").catch(() => undefined);
+  const waitForExit = once(child, "exit").catch(() => undefined);
+  try {
+    process.kill(-child.pid, "SIGTERM");
+  } catch {
+    child.kill("SIGTERM");
+  }
+
+  const forcedKill = new Promise<void>((resolve) => {
+    setTimeout(() => {
+      try {
+        process.kill(-child.pid!, "SIGKILL");
+      } catch {
+        child.kill("SIGKILL");
+      }
+      resolve();
+    }, 5000);
+  });
+
+  await Promise.race([waitForExit, forcedKill]);
 }
 
 async function main() {
