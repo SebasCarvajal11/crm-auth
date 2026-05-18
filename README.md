@@ -34,7 +34,7 @@ JWKS: `http://localhost:3000/.well-known/jwks.json`
 
 ## Environment
 
-Start from [.env.example](D:\BACKUP CELULAR OLIMPO\crm-auth\.env.example).
+Start from [`./.env.example`](./.env.example).
 
 Required runtime areas:
 
@@ -46,7 +46,7 @@ Required runtime areas:
 
 ## Contract and Verification
 
-- OpenAPI source: [openapi/openapi.yaml](D:\BACKUP CELULAR OLIMPO\crm-auth\openapi\openapi.yaml)
+- OpenAPI source: [`./openapi/openapi.yaml`](./openapi/openapi.yaml)
 - Hurl contract tests live under `tests/`
 
 For local Hurl runs that rely on temporary-password exposure, use test-only settings such as `NODE_ENV=test` and `EXPOSE_TEMP_PASSWORDS=true` only for the test execution window.
