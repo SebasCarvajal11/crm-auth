@@ -6,6 +6,7 @@ COPY tsconfig.json ./
 RUN pnpm install --prod --frozen-lockfile
 COPY src ./src
 COPY drizzle.config.ts ./
+COPY gateway ./gateway
 COPY openapi ./openapi
 
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001

@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { createAuthRoutes } from "./modules/auth/auth.routes";
 import { createUsersAdminRoutes } from "./modules/users/users.routes";
+import { createGatewayRoutes } from "./gateway/gateway.routes";
 import { createOpenApiRoutes } from "./openapi/openapi.routes";
 import { getJwksDocument } from "./config/jwt";
 import { onError } from "./shared/middlewares/error-handler.middleware";
@@ -43,6 +44,7 @@ export const createApp = () => {
 
   // --- OpenAPI + Swagger UI ---
   app.route("/", createOpenApiRoutes());
+  app.route("/", createGatewayRoutes());
 
   // --- API v1 routes ---
   const v1 = new Hono();
