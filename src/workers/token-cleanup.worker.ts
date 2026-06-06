@@ -4,6 +4,9 @@
  */
 import { env } from "../config/env";
 import { runTokenCleanup } from "../jobs/run-token-cleanup";
+import { getLogger } from "../shared/logger";
+
+const logger = getLogger();
 
 const intervalMs = env.TOKEN_CLEANUP_INTERVAL_MS;
 
@@ -16,15 +19,16 @@ async function tick() {
       counts.emailVerifications +
       counts.invitations;
     if (total > 0) {
-      console.log("[worker:cleanup] filas eliminadas:", counts);
+      logger.info({ topic: "worker:cleanup", counts }, "filas eliminadas");
     }
   } catch (err) {
-    console.error("[worker:cleanup] error:", err);
+    logger.error({ err, topic: "worker:cleanup" }, "error");
   }
 }
 
-console.log(
-  `[worker:cleanup] intervalo ${intervalMs}ms, retención ${env.TOKEN_CLEANUP_RETENTION_DAYS} días`,
+logger.info(
+  { topic: "worker:cleanup", intervalMs, retentionDays: env.TOKEN_CLEANUP_RETENTION_DAYS },
+  "started",
 );
 
 await tick();

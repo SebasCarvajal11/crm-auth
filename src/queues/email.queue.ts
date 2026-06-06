@@ -5,6 +5,9 @@ import type {
   EmailJobPublisher,
   TransactionalEmailJob,
 } from "../email/transactional-email.types";
+import { getLogger } from "../shared/logger";
+
+const logger = getLogger();
 
 const QUEUE_NAME = "mod-auth-email";
 
@@ -17,6 +20,7 @@ export const getEmailQueue = (): Queue<TransactionalEmailJob> | undefined => {
   if (!emailQueue) {
     emailQueue = new Queue<TransactionalEmailJob>(QUEUE_NAME, {
       connection: conn,
+      prefix: "auth",
       defaultJobOptions: {
         attempts: 5,
         backoff: { type: "exponential", delay: 4000 },
@@ -44,11 +48,11 @@ export function createEmailJobPublisher(): EmailJobPublisher {
           return;
         }
         void sendTransactionalEmail(job).catch((err) => {
-          console.error("[email direct]", err);
+          logger.error({ err, topic: "email direct" }, "send failed");
         });
       } catch (err) {
-        console.error("[email enqueue]", err);
-        void sendTransactionalEmail(job).catch((e) => console.error("[email fallback]", e));
+        logger.error({ err, topic: "email enqueue" }, "enqueue failed");
+        void sendTransactionalEmail(job).catch((e) => logger.error({ err: e, topic: "email fallback" }, "fallback send failed"));
       }
     },
   };

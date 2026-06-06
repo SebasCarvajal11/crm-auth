@@ -34,14 +34,14 @@ Content-Type: application/json
 }
 HTTP 201
 [Captures]
-worker_temp_password: jsonpath "$.data.temp_password"
+worker_invite_token: jsonpath "$.data.token"
 [Asserts]
 jsonpath "$.data.user.role" == "worker"
 jsonpath "$.data.user.email" == "worker@cima.dev"
 jsonpath "$.data.user.first_name" == "Ana"
 jsonpath "$.data.user.last_name" == "Ruiz"
 jsonpath "$.data.user.profession" == "Disenadora"
-jsonpath "$.data.temp_password" isString
+jsonpath "$.data.token" isString
 
 POST {{base_url}}/auth/register-worker
 Authorization: Bearer {{admin_token}}
@@ -55,3 +55,23 @@ Content-Type: application/json
 HTTP 409
 [Asserts]
 jsonpath "$.error" exists
+
+POST {{base_url}}/auth/accept-invite
+Content-Type: application/json
+{
+  "token": "{{worker_invite_token}}",
+  "password": "WorkerPassword123!"
+}
+HTTP 201
+[Captures]
+worker_access_token: jsonpath "$.data.access_token"
+[Asserts]
+jsonpath "$.data.user.role" == "worker"
+
+POST {{base_url}}/auth/login
+Content-Type: application/json
+{
+  "email": "worker@cima.dev",
+  "password": "WorkerPassword123!"
+}
+HTTP 200

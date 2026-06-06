@@ -5,6 +5,9 @@ import {
   utcMonthStart,
   type MonthSlice,
 } from "./audit-partition-utils";
+import { getLogger } from "../../shared/logger";
+
+const logger = getLogger();
 
 async function tableKind(
   pool: Pool,
@@ -46,8 +49,9 @@ export async function ensureAuditLogPartitions(pool: Pool): Promise<void> {
   const kind = await tableKind(pool, "schema_auth", "audit_logs");
   if (!kind) return;
   if (kind !== "p") {
-    console.warn(
-      "[audit_logs] La tabla no está particionada (relkind ≠ p). Ejecuta: pnpm db:partition-audit-migrate"
+    logger.warn(
+      { topic: "audit_logs" },
+      "La tabla no está particionada (relkind ≠ p). Ejecuta: pnpm db:partition-audit-migrate"
     );
     return;
   }

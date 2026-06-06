@@ -6,6 +6,9 @@ import {
   UnauthorizedError,
   ForbiddenError,
 } from "./error-handler.middleware";
+import { getLogger } from "../logger";
+
+const logger = getLogger();
 
 export interface JwtPayload {
   sub: string;
@@ -34,11 +37,23 @@ export type AppEnv = {
  * coinciden con `GATEWAY_TRUST_SECRET`, evitamos una segunda verificación RS256 en mod-auth.
  */
 function payloadFromTrustedGateway(c: {
-  req: { header: (name: string) => string | undefined };
+  req: { header: (name: string) => string | undefined; path: string };
 }): JwtPayload | null {
   if (!env.TRUST_GATEWAY_JWT_HEADERS || !env.GATEWAY_TRUST_SECRET) {
     return null;
   }
+
+  // Deshabilitar la confianza de cabeceras para rutas administrativas críticas de mod-auth
+  const isCriticalRoute =
+    c.req.path.startsWith("/users") ||
+    c.req.path.startsWith("/auth/register-worker") ||
+    c.req.path.startsWith("/auth/invite-admin") ||
+    c.req.path.startsWith("/auth/invite-client");
+
+  if (isCriticalRoute) {
+    return null;
+  }
+
   if (c.req.header("X-Gateway-Trust") !== env.GATEWAY_TRUST_SECRET) {
     return null;
   }
@@ -77,9 +92,9 @@ export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
   if (env.TRUST_GATEWAY_JWT_HEADERS && env.GATEWAY_TRUST_SECRET) {
     const trustHeader = c.req.header("X-Gateway-Trust");
     if (!trustHeader) {
-      console.warn("[auth] X-Gateway-Trust header missing — falling back to JWT verification");
+      logger.warn({ topic: "auth" }, "X-Gateway-Trust header missing — falling back to JWT verification");
     } else if (trustHeader !== env.GATEWAY_TRUST_SECRET) {
-      console.warn("[auth] X-Gateway-Trust mismatch — falling back to JWT verification");
+      logger.warn({ topic: "auth" }, "X-Gateway-Trust mismatch — falling back to JWT verification");
     }
   }
 

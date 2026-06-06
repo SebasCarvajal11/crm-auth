@@ -1,4 +1,5 @@
 allowBuilds:
+  '@sebascarvajal11/cima-contracts': true
   bcrypt: true
   esbuild: true
   msgpackr-extract: true

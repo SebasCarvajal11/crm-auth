@@ -1,8 +1,9 @@
-import type { ActiveSessionFamilyRow, UsersRepository } from "../users/users.repository";
+import type { ActiveSessionFamilyRow } from "../users/users.repository";
+import type { SessionListingRepository } from "./ports/auth-repositories.port";
 import { NotFoundError } from "../../shared/middlewares/error-handler.middleware";
 import { hashRefreshToken } from "./auth.token-utils";
 
-export const createSessionListingMethods = (repo: UsersRepository) => ({
+export const createSessionListingService = (repo: SessionListingRepository) => ({
   listMySessions: async (userId: string, plainRefreshCookie: string | undefined) => {
     const rows = await repo.listActiveSessionFamilies(userId);
     let currentFamily: string | null = null;

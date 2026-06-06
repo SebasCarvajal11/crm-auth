@@ -24,15 +24,15 @@ Content-Type: application/json
 }
 HTTP 201
 [Captures]
-worker_rbac_temp_password: jsonpath "$.data.temp_password"
+worker_rbac_invite_token: jsonpath "$.data.token"
 
-POST {{base_url}}/auth/login
+POST {{base_url}}/auth/accept-invite
 Content-Type: application/json
 {
-  "email": "worker.rbac@cima.dev",
-  "password": "{{worker_rbac_temp_password}}"
+  "token": "{{worker_rbac_invite_token}}",
+  "password": "WorkerPassword123!"
 }
-HTTP 200
+HTTP 201
 [Captures]
 worker_token: jsonpath "$.data.access_token"
 

@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 import { env } from "../../config/env";
-import type { AuthService } from "./auth.service";
+import type { InvitationService, WorkerRegistrationService } from "./auth.service";
 import type {
   AcceptInviteRequest,
   InviteAdminRequest,
@@ -11,11 +11,14 @@ import { validatedJson } from "./validated-json";
 import type { AppEnv } from "../../shared/middlewares/auth.middleware";
 import { getIp, getUa, setRefreshCookie } from "./auth.controller.helpers";
 
-export const createInvitesAdminControllerHandlers = (authService: AuthService) => ({
+export const createInvitesAdminControllerHandlers = (
+  invitationService: InvitationService,
+  workerRegistrationService: WorkerRegistrationService
+) => ({
   registerWorker: async (c: Context<AppEnv>) => {
     const data = validatedJson<RegisterWorkerRequest>(c);
     const { userId } = c.get("user");
-    const result = await authService.registerWorker(data, userId, getIp(c), getUa(c));
+    const result = await workerRegistrationService.registerWorker(data, userId, getIp(c), getUa(c));
 
     return c.json({ data: result }, 201);
   },
@@ -23,7 +26,7 @@ export const createInvitesAdminControllerHandlers = (authService: AuthService) =
   inviteAdmin: async (c: Context<AppEnv>) => {
     const data = validatedJson<InviteAdminRequest>(c);
     const { userId } = c.get("user");
-    const result = await authService.inviteAdmin(data, userId, getIp(c), getUa(c));
+    const result = await workerRegistrationService.inviteAdmin(data, userId, getIp(c), getUa(c));
 
     return c.json(
       {
@@ -37,7 +40,7 @@ export const createInvitesAdminControllerHandlers = (authService: AuthService) =
   inviteClient: async (c: Context<AppEnv>) => {
     const data = validatedJson<InviteClientRequest>(c);
     const { userId } = c.get("user");
-    const result = await authService.inviteClient(data, userId, getIp(c), getUa(c));
+    const result = await invitationService.inviteClient(data, userId, getIp(c), getUa(c));
 
     return c.json(
       {
@@ -50,17 +53,18 @@ export const createInvitesAdminControllerHandlers = (authService: AuthService) =
 
   getInvitationData: async (c: Context) => {
     const token = c.req.param("token") ?? "";
-    const data = await authService.getInvitationData(token);
+    const data = await invitationService.getInvitationData(token);
 
     return c.json({ data }, 200);
   },
 
   acceptInvite: async (c: Context) => {
     const data = validatedJson<AcceptInviteRequest>(c);
-    const result = await authService.acceptInvitation(data, getIp(c), getUa(c));
+    const result = await invitationService.acceptInvitation(data, getIp(c), getUa(c));
 
     setRefreshCookie(c, result.refresh_token);
 
     return c.json({ data: { access_token: result.access_token, user: result.user } }, 201);
   },
 });
+

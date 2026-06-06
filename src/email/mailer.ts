@@ -3,6 +3,9 @@ import type SMTPTransport from "nodemailer/lib/smtp-transport";
 import { env } from "../config/env";
 import type { TransactionalEmailJob } from "./transactional-email.types";
 import { renderTransactionalEmail } from "./transactional-email.templates";
+import { getLogger } from "../shared/logger";
+
+const logger = getLogger();
 
 let smtpTransport: nodemailer.Transporter | undefined;
 let smtpVerified = false;
@@ -49,8 +52,8 @@ const sendRaw = async (opts: {
   };
 
   if (env.MAIL_TRANSPORT === "log") {
-    console.log("[mail:log]", payload.subject, "->", opts.to);
-    console.log(payload.text);
+    logger.info({ topic: "mail:log", subject: payload.subject, to: opts.to }, "email sent");
+    logger.debug({ text: payload.text }, "email body");
     return;
   }
 

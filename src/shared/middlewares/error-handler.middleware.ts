@@ -1,4 +1,5 @@
 import type { Context } from "hono";
+import { getLogger } from "../logger";
 
 // --- Custom Error Classes ---
 
@@ -57,6 +58,19 @@ export const onError = (err: Error, c: Context): Response => {
     return c.json({ error: err.message }, err.statusCode as HttpStatus);
   }
 
-  console.error("[Unhandled Error]", err.message);
-  return c.json({ error: "Internal Server Error" }, 500);
+  const logger = c.get("requestLogger") ?? getLogger();
+  const traceId = c.get("traceId");
+
+  logger.error({
+    err,
+    traceId,
+    method: c.req.method,
+    path: c.req.path,
+    msg: "unhandled error",
+  });
+
+  return c.json(
+    { error: "Internal Server Error", ...(traceId ? { traceId } : {}) },
+    500
+  );
 };

@@ -1,6 +1,6 @@
 import { hash } from "bcrypt";
 import { randomBytes } from "crypto";
-import type { UsersRepository } from "../users/users.repository";
+import type { WorkerRegistrationRepository } from "./ports/auth-repositories.port";
 import type { RegisterWorkerRequest } from "./auth.schemas";
 import type { EmailJobPublisher } from "../../email/transactional-email.types";
 import { env } from "../../config/env";
@@ -10,12 +10,15 @@ import {
   UnauthorizedError,
 } from "../../shared/middlewares/error-handler.middleware";
 import { BCRYPT_ROUNDS } from "./auth.constants";
+import { getLogger } from "../../shared/logger";
+
+const logger = getLogger();
 
 const mayExposeTempPasswordInResponse = () =>
   env.NODE_ENV === "test" && env.EXPOSE_TEMP_PASSWORDS;
 
-export const createWorkerRegistrationMethods = (
-  repo: UsersRepository,
+export const createWorkerRegistrationService = (
+  repo: WorkerRegistrationRepository,
   mail: EmailJobPublisher
 ) => ({
   registerWorker: async (
@@ -34,50 +37,48 @@ export const createWorkerRegistrationMethods = (
       );
     }
 
-    const tempPassword = randomBytes(8).toString("hex");
-    const passwordHash = await hash(tempPassword, BCRYPT_ROUNDS);
+    const pendingInvite = await repo.findPendingInvitationByEmail(data.email);
+    if (pendingInvite) {
+      throw new ConflictError("Ya existe una invitación pendiente para este correo");
+    }
 
-    const user = await repo.transaction(async (txRepo) => {
-      const created = await txRepo.createUser({
-        email: data.email,
-        passwordHash,
-        role: "worker",
-        firstName: data.first_name,
-        lastName: data.last_name,
-        profession: data.profession,
-        emailVerifiedAt: new Date(),
-        forcePasswordChange: true,
-      });
+    const rawToken = randomBytes(32).toString("hex");
 
-      await txRepo.createAuditLog(adminUserId, "worker_registered", ip, userAgent, {
-        email: data.email,
-        first_name: data.first_name,
-        last_name: data.last_name,
-        profession: data.profession,
-      });
+    await repo.createInvitation({
+      email: data.email,
+      firstName: data.first_name,
+      lastName: data.last_name,
+      role: "worker",
+      profession: data.profession,
+      token: rawToken,
+      createdBy: adminUserId,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    });
 
-      return created;
+    await repo.createAuditLog(adminUserId, "worker_registered", ip, userAgent, {
+      email: data.email,
+      first_name: data.first_name,
+      last_name: data.last_name,
+      profession: data.profession,
     });
 
     mail
       .enqueue({
-        type: "worker_welcome",
+        type: "client_invite",
         to: data.email,
-        tempPassword,
+        token: rawToken,
       })
-      .catch((err) => console.error("[mail enqueue worker]", err));
+      .catch((err) => logger.error({ err, topic: "mail enqueue worker invite" }, "enqueue failed"));
 
     return {
       user: {
-        id: user.subject,
-        email: user.email,
-        role: user.role,
-        first_name: user.firstName,
-        last_name: user.lastName,
-        profession: user.profession,
-        force_password_change: true,
+        email: data.email,
+        role: "worker" as const,
+        first_name: data.first_name,
+        last_name: data.last_name,
+        profession: data.profession,
       },
-      ...(mayExposeTempPasswordInResponse() ? { temp_password: tempPassword } : {}),
+      ...(env.NODE_ENV === "test" ? { token: rawToken } : {}),
     };
   },
 
@@ -111,48 +112,45 @@ export const createWorkerRegistrationMethods = (
       );
     }
 
-    const tempPassword = randomBytes(8).toString("hex");
-    const passwordHash = await hash(tempPassword, BCRYPT_ROUNDS);
+    const pendingInvite = await repo.findPendingInvitationByEmail(data.email);
+    if (pendingInvite) {
+      throw new ConflictError("Ya existe una invitación pendiente para este correo");
+    }
 
-    const user = await repo.transaction(async (txRepo) => {
-      const created = await txRepo.createUser({
-        email: data.email,
-        passwordHash,
-        role: "admin",
-        firstName: data.first_name,
-        lastName: data.last_name,
-        emailVerifiedAt: new Date(),
-        forcePasswordChange: true,
-      });
+    const rawToken = randomBytes(32).toString("hex");
 
-      await txRepo.createAuditLog(adminUserId, "admin_invited", ip, userAgent, {
-        email: data.email,
-        first_name: data.first_name,
-        last_name: data.last_name,
-      });
+    await repo.createInvitation({
+      email: data.email,
+      firstName: data.first_name,
+      lastName: data.last_name,
+      role: "admin",
+      token: rawToken,
+      createdBy: adminUserId,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    });
 
-      return created;
+    await repo.createAuditLog(adminUserId, "admin_invited", ip, userAgent, {
+      email: data.email,
+      first_name: data.first_name,
+      last_name: data.last_name,
     });
 
     mail
       .enqueue({
-        type: "worker_welcome",
+        type: "client_invite",
         to: data.email,
-        tempPassword,
+        token: rawToken,
       })
-      .catch((err) => console.error("[mail enqueue admin]", err));
+      .catch((err) => logger.error({ err, topic: "mail enqueue admin invite" }, "enqueue failed"));
 
     return {
       user: {
-        id: user.subject,
-        email: user.email,
-        role: user.role,
-        first_name: user.firstName,
-        last_name: user.lastName,
-        profession: user.profession,
-        force_password_change: true,
+        email: data.email,
+        role: "admin" as const,
+        first_name: data.first_name,
+        last_name: data.last_name,
       },
-      ...(mayExposeTempPasswordInResponse() ? { temp_password: tempPassword } : {}),
+      ...(env.NODE_ENV === "test" ? { token: rawToken } : {}),
     };
   },
 });

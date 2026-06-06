@@ -6,7 +6,6 @@ export const AdminListUsersQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
   role: RoleEnum.optional(),
   q: z.string().trim().min(1).max(120).optional(),
-  /** Si es true, incluye usuarios con soft-delete (`deleted_at`). */
   include_deleted: z.coerce.boolean().optional().default(false),
 });
 
@@ -18,22 +17,16 @@ export const AdminUserSubjectParamSchema = z.object({
   subject: z.string().uuid(),
 });
 
-/** Políticas editables por soporte (sin pasar por cambio de contraseña del usuario). */
 export const AdminPatchUserFlagsSchema = z.object({
   force_password_change: z.boolean(),
 });
 
 export const SearchUsersQuerySchema = z.object({
-  q:    z.string().min(1).max(100),
+  q: z.string().min(1).max(100),
   role: RoleEnum.default("client"),
-});
-
-export const BySubjectsQuerySchema = z.object({
-  subjects: z.string().min(1).transform((s) => s.split(",").filter(Boolean)),
 });
 
 export type AdminListUsersQuery = z.infer<typeof AdminListUsersQuerySchema>;
 export type AdminPatchUserStatusBody = z.infer<typeof AdminPatchUserStatusSchema>;
 export type AdminPatchUserFlagsBody = z.infer<typeof AdminPatchUserFlagsSchema>;
 export type SearchUsersQuery = z.infer<typeof SearchUsersQuerySchema>;
-export type BySubjectsQuery = z.infer<typeof BySubjectsQuerySchema>;

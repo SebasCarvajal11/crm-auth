@@ -1,6 +1,6 @@
 import { hash } from "bcrypt";
 import { randomBytes } from "crypto";
-import type { UsersRepository } from "../users/users.repository";
+import type { InvitationRepository } from "./ports/auth-repositories.port";
 import type { InviteClientRequest, AcceptInviteRequest } from "./auth.schemas";
 import type { EmailJobPublisher } from "../../email/transactional-email.types";
 import { env } from "../../config/env";
@@ -11,9 +11,12 @@ import {
 } from "../../shared/middlewares/error-handler.middleware";
 import { BCRYPT_ROUNDS } from "./auth.constants";
 import { issueTokenPair } from "./auth.token-utils";
+import { getLogger } from "../../shared/logger";
 
-export const createInvitationMethods = (
-  repo: UsersRepository,
+const logger = getLogger();
+
+export const createInvitationService = (
+  repo: InvitationRepository,
   mail: EmailJobPublisher
 ) => ({
   inviteClient: async (
@@ -30,6 +33,11 @@ export const createInvitationMethods = (
       throw new ConflictError(
         "Existe una cuenta archivada con ese correo; restáurala o usa otro correo."
       );
+    }
+
+    const pendingInvite = await repo.findPendingInvitationByEmail(data.email);
+    if (pendingInvite) {
+      throw new ConflictError("Ya existe una invitación pendiente para este correo");
     }
 
     const rawToken = randomBytes(32).toString("hex");
@@ -59,7 +67,7 @@ export const createInvitationMethods = (
         to: data.email,
         token: rawToken,
       })
-      .catch((err) => console.error("[mail enqueue invite]", err));
+      .catch((err) => logger.error({ err, topic: "mail enqueue invite" }, "enqueue failed"));
 
     return env.NODE_ENV === "test" ? { token: rawToken } : undefined;
   },
@@ -77,65 +85,75 @@ export const createInvitationMethods = (
       last_name: invitation.lastName,
       client_kind: invitation.clientKind,
       company_name: invitation.companyName,
+      role: invitation.role,
+      profession: invitation.profession,
     };
   },
 
   acceptInvitation: async (data: AcceptInviteRequest, ip: string, userAgent: string) => {
-    const invitation = await repo.findInvitationByToken(data.token);
-    if (!invitation) throw new NotFoundError("Invitación no encontrada");
-    if (invitation.isUsed) throw new ConflictError("Esta invitación ya fue utilizada");
-    if (invitation.expiresAt < new Date())
-      throw new UnauthorizedError("La invitación ha expirado");
+    const result = await repo.transaction(async (tx) => {
+      const invitation = await tx.findInvitationByToken(data.token);
+      if (!invitation) throw new NotFoundError("Invitación no encontrada");
+      if (invitation.isUsed) throw new ConflictError("Esta invitación ya fue utilizada");
+      if (invitation.expiresAt < new Date())
+        throw new UnauthorizedError("La invitación ha expirado");
 
-    const dup = await repo.findByEmailIncludingDeleted(invitation.email);
-    if (dup && !dup.deletedAt) {
-      throw new ConflictError("Ya existe una cuenta con este correo");
-    }
-    if (dup?.deletedAt) {
-      throw new ConflictError(
-        "Existe una cuenta archivada con este correo. Restáurala desde administración."
+      const dup = await tx.findByEmailIncludingDeleted(invitation.email);
+      if (dup && !dup.deletedAt) {
+        throw new ConflictError("Ya existe una cuenta con este correo");
+      }
+      if (dup?.deletedAt) {
+        throw new ConflictError(
+          "Existe una cuenta archivada con este correo. Restáurala desde administración."
+        );
+      }
+
+      const passwordHash = await hash(data.password, BCRYPT_ROUNDS);
+
+      const user = await tx.createUser({
+        email: invitation.email,
+        passwordHash,
+        role: invitation.role,
+        firstName: invitation.firstName,
+        lastName: invitation.lastName,
+        clientKind: invitation.clientKind,
+        companyName: invitation.companyName,
+        profession: invitation.profession,
+        emailVerifiedAt: new Date(),
+      });
+
+      await tx.markInvitationAsUsed(invitation.id);
+
+      await tx.markSuccessfulLogin(user.id);
+
+      const { accessToken, rawRefreshToken } = await issueTokenPair(
+        tx,
+        user.id,
+        user.subject,
+        user.role,
+        user.email,
+        userAgent,
+        false
       );
-    }
 
-    const passwordHash = await hash(data.password, BCRYPT_ROUNDS);
+      await tx.createAuditLog(user.id, "invitation_accepted", ip, userAgent, {
+        invitation_id: invitation.id,
+      });
+      await tx.createIdentityOutboxEvent("user.registered", user);
 
-    const user = await repo.createUser({
-      email: invitation.email,
-      passwordHash,
-      role: "client",
-      firstName: invitation.firstName,
-      lastName: invitation.lastName,
-      clientKind: invitation.clientKind,
-      companyName: invitation.companyName,
-      emailVerifiedAt: new Date(),
+      return {
+        response: {
+          access_token: accessToken,
+          refresh_token: rawRefreshToken,
+          user: {
+            id: user.subject,
+            role: user.role,
+            force_password_change: false,
+          },
+        },
+      };
     });
 
-    await repo.markInvitationAsUsed(invitation.id);
-
-    await repo.markSuccessfulLogin(user.id);
-
-    const { accessToken, rawRefreshToken } = await issueTokenPair(
-      repo,
-      user.id,
-      user.subject,
-      user.role,
-      user.email,
-      userAgent,
-      false
-    );
-
-    await repo.createAuditLog(user.id, "invitation_accepted", ip, userAgent, {
-      invitation_id: invitation.id,
-    });
-
-    return {
-      access_token: accessToken,
-      refresh_token: rawRefreshToken,
-      user: {
-        id: user.subject,
-        role: user.role,
-        force_password_change: false,
-      },
-    };
+    return result.response;
   },
 });

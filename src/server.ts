@@ -2,9 +2,12 @@ import { serve } from "@hono/node-server";
 import { env } from "./config/env";
 import { pool } from "./db/connection";
 import { ensureAuditLogPartitions } from "./db/scripts/ensure-audit-log-partitions";
+import { getLogger } from "./shared/logger";
+
+const logger = getLogger();
 
 await ensureAuditLogPartitions(pool).catch((err) =>
-  console.error("[audit_logs] ensure partitions:", err)
+  logger.error({ err, topic: "audit_logs" }, "ensure partitions failed")
 );
 
 const { createApp } = await import("./app");
@@ -16,17 +19,17 @@ let isShuttingDown = false;
 const shutdown = async (signal: string) => {
   if (isShuttingDown) return;
   isShuttingDown = true;
-  console.log(`[shutdown] ${signal}: cerrando HTTP y recursos…`);
+  logger.info({ signal, topic: "shutdown" }, "cerrando HTTP y recursos");
 
   if (serverRef) {
     await new Promise<void>((resolve, reject) => {
       serverRef!.close((err) => (err ? reject(err) : resolve()));
-    }).catch((err) => console.error("[shutdown] server.close:", err));
+    }).catch((err) => logger.error({ err, topic: "shutdown" }, "server.close failed"));
     serverRef = null;
   }
 
-  await pool.end().catch((err) => console.error("[shutdown] pool.end:", err));
-  console.log("[shutdown] Listo.");
+  await pool.end().catch((err) => logger.error({ err, topic: "shutdown" }, "pool.end failed"));
+  logger.info({ topic: "shutdown" }, "Listo");
 };
 
 const exitAfterShutdown = (signal: string) => {
@@ -42,7 +45,6 @@ serverRef = serve(
     port: env.PORT,
   },
   (info) => {
-    console.log(`🚀 mod-auth corriendo en http://localhost:${info.port}`);
-    console.log(`   Entorno: ${env.NODE_ENV}`);
+    logger.info({ port: info.port, env: env.NODE_ENV }, "server started");
   }
 );

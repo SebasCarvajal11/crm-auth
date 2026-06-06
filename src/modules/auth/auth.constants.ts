@@ -1,6 +1,8 @@
-/** Constantes compartidas del dominio auth (TTL, bcrypt). */
-export const BCRYPT_ROUNDS = 12;
-export const ACCESS_TOKEN_TTL_SECONDS = 8 * 60 * 60; // 8 horas
-export const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-export const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
-export const EMAIL_VERIFY_TTL_MS = 48 * 60 * 60 * 1000;
+import { env } from "../../config/env";
+
+/** Constantes compartidas del dominio auth (TTL, bcrypt), ahora parametrizadas mediante variables de entorno. */
+export const BCRYPT_ROUNDS = env.BCRYPT_ROUNDS;
+export const ACCESS_TOKEN_TTL_SECONDS = env.ACCESS_TOKEN_TTL_SECONDS;
+export const REFRESH_TOKEN_TTL_MS = env.REFRESH_TOKEN_TTL_MS;
+export const PASSWORD_RESET_TTL_MS = env.PASSWORD_RESET_TTL_MS;
+export const EMAIL_VERIFY_TTL_MS = env.EMAIL_VERIFY_TTL_MS;

@@ -6,7 +6,7 @@
  */
 import "dotenv/config";
 import { Pool } from "pg";
-import { env } from "../../config/env";
+import { pgConnectionConfig } from "../pg-config";
 import {
   assertSafePartitionName,
   enumerateUtcMonths,
@@ -14,6 +14,9 @@ import {
   utcMonthStart,
   type MonthSlice,
 } from "./audit-partition-utils";
+import { getLogger } from "../../shared/logger";
+
+const logger = getLogger();
 
 async function relKind(
   client: Pick<Pool, "query">,
@@ -31,20 +34,18 @@ async function relKind(
 }
 
 async function main() {
-  const pool = new Pool({ connectionString: env.DATABASE_URL });
+  const pool = new Pool(pgConnectionConfig);
   const client = await pool.connect();
 
   try {
     const kind = await relKind(client, "schema_auth", "audit_logs");
     if (!kind) {
-      console.error(
-        "No existe schema_auth.audit_logs. Genera el esquema (p. ej. drizzle-kit push) antes."
-      );
+      logger.error("No existe schema_auth.audit_logs. Genera el esquema (p. ej. drizzle-kit push) antes.");
       process.exitCode = 1;
       return;
     }
     if (kind === "p") {
-      console.log("audit_logs ya es tabla particionada (padre). No hay nada que hacer.");
+      logger.info("audit_logs ya es tabla particionada (padre). No hay nada que hacer.");
       return;
     }
 
@@ -123,10 +124,10 @@ async function main() {
     `);
 
     await client.query("COMMIT");
-    console.log("✓ Migración audit_logs → particionada por mes completada.");
+    logger.info("Migración audit_logs → particionada por mes completada");
   } catch (err) {
     await client.query("ROLLBACK").catch(() => undefined);
-    console.error("Migración fallida (ROLLBACK aplicado):", err);
+    logger.error({ err }, "Migración fallida (ROLLBACK aplicado)");
     process.exitCode = 1;
   } finally {
     client.release();

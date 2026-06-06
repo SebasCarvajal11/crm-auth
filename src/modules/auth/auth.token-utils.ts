@@ -1,5 +1,5 @@
 import { randomBytes, createHash, randomUUID } from "crypto";
-import type { UsersRepository } from "../users/users.repository";
+import type { RefreshTokenWriter } from "./ports/auth-repositories.port";
 import { env } from "../../config/env";
 import { normalizePem, signRs256Jwt } from "../../config/jwt";
 import { ACCESS_TOKEN_TTL_SECONDS, REFRESH_TOKEN_TTL_MS } from "./auth.constants";
@@ -31,7 +31,7 @@ export const buildAccessToken = (
 };
 
 export const issueTokenPair = async (
-  repo: UsersRepository,
+  repo: RefreshTokenWriter,
   userId: string,
   subject: string,
   role: "admin" | "worker" | "client",

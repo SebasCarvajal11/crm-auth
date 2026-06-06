@@ -6,6 +6,7 @@ import type {
   passwordResets,
   emailVerifications,
   auditLogs,
+  identityOutbox,
 } from "../../db/schema";
 
 export type User = InferSelectModel<typeof users>;
@@ -26,6 +27,8 @@ export type NewEmailVerification = InferInsertModel<typeof emailVerifications>;
 export type AuditLog = InferSelectModel<typeof auditLogs>;
 export type AuditDetails = Record<string, unknown>;
 
+export type IdentityOutboxEvent = InferSelectModel<typeof identityOutbox>;
+
 export type UserPatch = {
   passwordHash?: string;
   isActive?: boolean;
@@ -35,4 +38,9 @@ export type UserPatch = {
   failedLoginAttempts?: number;
   lockedUntil?: Date | null;
   deletedAt?: Date | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  clientKind?: "natural" | "juridical" | null;
+  companyName?: string | null;
+  profession?: string | null;
 };

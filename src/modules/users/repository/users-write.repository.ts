@@ -2,17 +2,29 @@ import type { DbOrTx } from "../users.repository";
 import { and, desc, eq, ilike, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
 import { users } from "../../../db/schema";
 import type { NewUser, UserPatch } from "../users.types";
+import { UserEntity } from "../domain/user.entity";
 
 export const createUsersWriteRepository = (conn: DbOrTx) => ({
   createUser: async (userData: NewUser) => {
-    const [user] = await conn.insert(users).values(userData).returning();
+    const entity = UserEntity.create(userData);
+    const [user] = await conn.insert(users).values(entity.toPersistence()).returning();
     return user;
   },
 
   updateUserById: async (id: string, data: UserPatch) => {
+    const [existing] = await conn
+      .select()
+      .from(users)
+      .where(eq(users.id, id))
+      .limit(1);
+    if (!existing) return null;
+
+    const entity = UserEntity.fromPersistence(existing);
+    const updatedEntity = entity.update(data);
+
     const [user] = await conn
       .update(users)
-      .set({ ...data, updatedAt: new Date() })
+      .set(updatedEntity.toPersistence())
       .where(eq(users.id, id))
       .returning();
     return user ?? null;

@@ -1,8 +1,8 @@
 import type {
   AdminUserListRow,
   UserPublicProfileRow,
-  UsersRepository,
 } from "../users/users.repository";
+import type { AdminUserRepository } from "./ports/auth-repositories.port";
 import {
   NotFoundError,
   ConflictError,
@@ -10,26 +10,12 @@ import {
   ForbiddenError,
 } from "../../shared/middlewares/error-handler.middleware";
 
-export const createAdminUserMethods = (repo: UsersRepository) => ({
+export const createAdminUserService = (repo: AdminUserRepository) => ({
   searchUsersByEmail: async (
     q: string,
     role: "admin" | "worker" | "client" = "client"
   ) => {
     const rows = await repo.searchActiveByEmailAndRole(q, role);
-    return rows.map((u: UserPublicProfileRow) => ({
-      subject: u.subject,
-      email: u.email,
-      role: u.role,
-      first_name: u.firstName,
-      last_name: u.lastName,
-      client_kind: u.clientKind,
-      company_name: u.companyName,
-      profession: u.profession,
-    }));
-  },
-
-  getUsersBySubjects: async (subjects: string[]) => {
-    const rows = await repo.findBySubjects(subjects);
     return rows.map((u: UserPublicProfileRow) => ({
       subject: u.subject,
       email: u.email,
@@ -94,22 +80,27 @@ export const createAdminUserMethods = (repo: UsersRepository) => ({
       throw new ForbiddenError("No puedes desactivar tu propia cuenta");
     }
 
-    const target = await repo.findBySubjectIncludingDeleted(targetSubject);
-    if (!target) throw new NotFoundError("Usuario no encontrado");
+    await repo.transaction(async (tx) => {
+      const target = await tx.findBySubjectIncludingDeleted(targetSubject);
+      if (!target) throw new NotFoundError("Usuario no encontrado");
 
-    if (target.deletedAt && isActive) {
-      throw new BadRequestError("La cuenta está archivada; restáurala antes de activarla.");
-    }
+      if (target.deletedAt && isActive) {
+        throw new BadRequestError("La cuenta esta archivada; restaurala antes de activarla.");
+      }
 
-    await repo.updateUserById(target.id, { isActive });
-    await repo.createAuditLog(adminUserId, "admin_user_status_updated", ip, userAgent, {
-      target_subject: targetSubject,
-      is_active: isActive,
+      const updated = await tx.updateUserById(target.id, { isActive });
+      if (!updated) throw new NotFoundError("Usuario no encontrado");
+
+      await tx.createAuditLog(adminUserId, "admin_user_status_updated", ip, userAgent, {
+        target_subject: targetSubject,
+        is_active: isActive,
+      });
+      await tx.createIdentityOutboxEvent("user.updated", updated);
+
+      if (!isActive) {
+        await tx.revokeAllRefreshTokensForUser(target.id);
+      }
     });
-
-    if (!isActive) {
-      await repo.revokeAllRefreshTokensForUser(target.id);
-    }
   },
 
   adminSetForcePasswordChangeBySubject: async (
@@ -140,17 +131,22 @@ export const createAdminUserMethods = (repo: UsersRepository) => ({
       throw new ForbiddenError("No puedes archivar tu propia cuenta");
     }
 
-    const target = await repo.findBySubjectIncludingDeleted(targetSubject);
-    if (!target) throw new NotFoundError("Usuario no encontrado");
-    if (target.deletedAt) throw new ConflictError("La cuenta ya está archivada");
+    await repo.transaction(async (tx) => {
+      const target = await tx.findBySubjectIncludingDeleted(targetSubject);
+      if (!target) throw new NotFoundError("Usuario no encontrado");
+      if (target.deletedAt) throw new ConflictError("La cuenta ya esta archivada");
 
-    await repo.updateUserById(target.id, {
-      deletedAt: new Date(),
-      isActive: false,
-    });
-    await repo.revokeAllRefreshTokensForUser(target.id);
-    await repo.createAuditLog(adminUserId, "user_soft_deleted", ip, userAgent, {
-      target_subject: targetSubject,
+      const updated = await tx.updateUserById(target.id, {
+        deletedAt: new Date(),
+        isActive: false,
+      });
+      if (!updated) throw new NotFoundError("Usuario no encontrado");
+
+      await tx.revokeAllRefreshTokensForUser(target.id);
+      await tx.createAuditLog(adminUserId, "user_soft_deleted", ip, userAgent, {
+        target_subject: targetSubject,
+      });
+      await tx.createIdentityOutboxEvent("user.deleted", updated);
     });
   },
 
@@ -160,13 +156,36 @@ export const createAdminUserMethods = (repo: UsersRepository) => ({
     ip: string,
     userAgent: string
   ) => {
-    const target = await repo.findBySubjectIncludingDeleted(targetSubject);
-    if (!target) throw new NotFoundError("Usuario no encontrado");
-    if (!target.deletedAt) throw new ConflictError("La cuenta no está archivada");
+    await repo.transaction(async (tx) => {
+      const target = await tx.findBySubjectIncludingDeleted(targetSubject);
+      if (!target) throw new NotFoundError("Usuario no encontrado");
+      if (!target.deletedAt) throw new ConflictError("La cuenta no esta archivada");
 
-    await repo.updateUserById(target.id, { deletedAt: null, isActive: true });
-    await repo.createAuditLog(adminUserId, "user_restored", ip, userAgent, {
-      target_subject: targetSubject,
+      const updated = await tx.updateUserById(target.id, { deletedAt: null, isActive: true });
+      if (!updated) throw new NotFoundError("Usuario no encontrado");
+
+      await tx.createAuditLog(adminUserId, "user_restored", ip, userAgent, {
+        target_subject: targetSubject,
+      });
+      await tx.createIdentityOutboxEvent("user.updated", updated);
     });
+  },
+
+  listActiveUsersForBootstrap: async () => {
+    const { rows } = await repo.listUsersPaginated({
+      page: 1,
+      limit: 100000,
+      includeDeleted: false,
+    });
+    return rows.map((u: AdminUserListRow) => ({
+      subject: u.subject,
+      email: u.email,
+      role: u.role,
+      first_name: u.firstName,
+      last_name: u.lastName,
+      client_kind: u.clientKind,
+      company_name: u.companyName,
+      profession: u.profession,
+    }));
   },
 });

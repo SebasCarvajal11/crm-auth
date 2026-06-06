@@ -6,7 +6,7 @@
 # El lockout por cuenta (8 intentos → 30min) sigue en mod-auth.
 #
 # Ejecutar: hurl --test tests/07_rate_limit.hurl
-# Requisito: KrakenD + mod-auth corriendo (start-project.ps1)
+# Requisito: KrakenD + mod-auth corriendo (crm-infra/start-local.ps1)
 
 POST {{base_url}}/auth/login
 X-Forwarded-For: {{LOGIN_IP}}

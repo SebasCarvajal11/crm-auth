@@ -1,15 +1,18 @@
 import type { Context } from "hono";
 import { env } from "../../config/env";
-import type { AuthService } from "./auth.service";
+import type { PasswordService, ProfileService } from "./auth.service";
 import type { ForgotPasswordRequest, ResetPasswordRequest } from "./auth.schemas";
 import { validatedJson } from "./validated-json";
 import type { AppEnv } from "../../shared/middlewares/auth.middleware";
 import { getIp, getUa } from "./auth.controller.helpers";
 
-export const createPasswordProfileControllerHandlers = (authService: AuthService) => ({
+export const createPasswordProfileControllerHandlers = (
+  passwordService: PasswordService,
+  profileService: ProfileService
+) => ({
   forgotPassword: async (c: Context) => {
     const { email } = validatedJson<ForgotPasswordRequest>(c);
-    const result = await authService.forgotPassword(email, getIp(c), getUa(c));
+    const result = await passwordService.forgotPassword(email, getIp(c), getUa(c));
 
     return c.json(
       {
@@ -22,14 +25,14 @@ export const createPasswordProfileControllerHandlers = (authService: AuthService
 
   resetPassword: async (c: Context) => {
     const data = validatedJson<ResetPasswordRequest>(c);
-    await authService.resetPassword(data.token, data.password, getIp(c), getUa(c));
+    await passwordService.resetPassword(data.token, data.password, getIp(c), getUa(c));
 
     return c.json({ message: "Contrasena actualizada correctamente" }, 200);
   },
 
   me: async (c: Context<AppEnv>) => {
     const { userId } = c.get("user");
-    const data = await authService.getMe(userId);
+    const data = await profileService.getMe(userId);
 
     return c.json({ data }, 200);
   },
@@ -37,8 +40,9 @@ export const createPasswordProfileControllerHandlers = (authService: AuthService
   /** Version plana de /me - para uso exclusivo del BFF aggregation (sin wrapper `data`). */
   meFlat: async (c: Context<AppEnv>) => {
     const { userId } = c.get("user");
-    const data = await authService.getMe(userId);
+    const data = await profileService.getMe(userId);
 
     return c.json(data, 200);
   },
 });
+

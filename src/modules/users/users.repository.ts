@@ -7,6 +7,7 @@ import { createPasswordResetsRepository } from "./repository/password-resets.rep
 import { createEmailVerificationsRepository } from "./repository/email-verifications.repository";
 import { createAuditLogsRepository } from "./repository/audit-logs.repository";
 import { createTokenCleanupRepository } from "./repository/token-cleanup.repository";
+import { createIdentityOutboxRepository } from "./repository/identity-outbox.repository";
 
 export type DB = typeof db;
 export type TX = Parameters<Parameters<DB["transaction"]>[0]>[0];
@@ -22,6 +23,7 @@ export const createUsersRepository = (conn: DbOrTx = db) => {
     ...createEmailVerificationsRepository(conn),
     ...createAuditLogsRepository(conn),
     ...createTokenCleanupRepository(conn),
+    ...createIdentityOutboxRepository(conn),
   };
 
   return {

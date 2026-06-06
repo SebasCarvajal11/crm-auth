@@ -21,6 +21,7 @@ pnpm dev
 Useful commands:
 
 - `pnpm worker:email`
+- `pnpm worker:identity-outbox`
 - `pnpm worker:cleanup`
 - `pnpm cleanup:tokens`
 - `pnpm db:seed`

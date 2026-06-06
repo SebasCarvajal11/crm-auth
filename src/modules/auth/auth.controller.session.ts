@@ -1,5 +1,10 @@
 import type { Context } from "hono";
-import type { AuthService } from "./auth.service";
+import type {
+  LoginSessionService,
+  PasswordService,
+  SessionListingService,
+  EmailVerificationService,
+} from "./auth.service";
 import type {
   ChangePasswordRequest,
   LoginRequest,
@@ -16,10 +21,15 @@ import {
   setRefreshCookie,
 } from "./auth.controller.helpers";
 
-export const createSessionControllerHandlers = (authService: AuthService) => ({
+export const createSessionControllerHandlers = (
+  loginSessionService: LoginSessionService,
+  passwordService: PasswordService,
+  sessionListingService: SessionListingService,
+  emailVerificationService: EmailVerificationService
+) => ({
   login: async (c: Context) => {
     const data = validatedJson<LoginRequest>(c);
-    const result = await authService.login(data, getIp(c), getUa(c));
+    const result = await loginSessionService.login(data, getIp(c), getUa(c));
 
     setRefreshCookie(c, result.refresh_token);
 
@@ -39,7 +49,7 @@ export const createSessionControllerHandlers = (authService: AuthService) => ({
     const rawRefreshToken = getRefreshCookie(c);
     if (!rawRefreshToken) throw new UnauthorizedError("No se encontró el token de refresco");
 
-    const result = await authService.refreshSession(rawRefreshToken, getIp(c), getUa(c));
+    const result = await loginSessionService.refreshSession(rawRefreshToken, getIp(c), getUa(c));
 
     setRefreshCookie(c, result.refresh_token);
 
@@ -49,7 +59,7 @@ export const createSessionControllerHandlers = (authService: AuthService) => ({
   changePassword: async (c: Context<AppEnv>) => {
     const { old_password, new_password } = validatedJson<ChangePasswordRequest>(c);
     const { userId } = c.get("user");
-    await authService.changePassword(userId, old_password, new_password, getIp(c), getUa(c));
+    await passwordService.changePassword(userId, old_password, new_password, getIp(c), getUa(c));
 
     deleteRefreshCookie(c);
     return c.json({ message: "Contraseña actualizada correctamente" }, 200);
@@ -58,7 +68,7 @@ export const createSessionControllerHandlers = (authService: AuthService) => ({
   listSessions: async (c: Context<AppEnv>) => {
     const { userId } = c.get("user");
     const plain = getRefreshCookie(c);
-    const sessions = await authService.listMySessions(userId, plain);
+    const sessions = await sessionListingService.listMySessions(userId, plain);
 
     return c.json({ data: { sessions } }, 200);
   },
@@ -67,7 +77,7 @@ export const createSessionControllerHandlers = (authService: AuthService) => ({
     const familyId = c.req.param("familyId") ?? "";
     const { userId } = c.get("user");
     const plain = getRefreshCookie(c);
-    const { wasCurrentSession } = await authService.revokeMySession(
+    const { wasCurrentSession } = await sessionListingService.revokeMySession(
       userId,
       familyId,
       plain,
@@ -84,7 +94,7 @@ export const createSessionControllerHandlers = (authService: AuthService) => ({
 
   requestEmailVerification: async (c: Context<AppEnv>) => {
     const { userId } = c.get("user");
-    const result = await authService.requestEmailVerification(userId, getIp(c), getUa(c));
+    const result = await emailVerificationService.requestEmailVerification(userId, getIp(c), getUa(c));
 
     return c.json(
       {
@@ -98,7 +108,7 @@ export const createSessionControllerHandlers = (authService: AuthService) => ({
 
   verifyEmail: async (c: Context) => {
     const { token } = validatedJson<VerifyEmailRequest>(c);
-    await authService.verifyEmailWithToken(token, getIp(c), getUa(c));
+    await emailVerificationService.verifyEmailWithToken(token, getIp(c), getUa(c));
 
     return c.json({ message: "Correo verificado correctamente" }, 200);
   },
@@ -108,10 +118,11 @@ export const createSessionControllerHandlers = (authService: AuthService) => ({
     const { userId } = c.get("user");
 
     if (rawRefreshToken) {
-      await authService.logout(rawRefreshToken, userId, getIp(c), getUa(c));
+      await loginSessionService.logout(rawRefreshToken, userId, getIp(c), getUa(c));
     }
 
     deleteRefreshCookie(c);
     return c.json({ message: "Sesión cerrada correctamente" }, 200);
   },
 });
+

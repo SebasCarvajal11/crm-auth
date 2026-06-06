@@ -1,5 +1,6 @@
 import { z } from "zod";
 import "dotenv/config";
+import { getLogger } from "../shared/logger";
 
 const pemFromEnv = z
   .string()
@@ -14,6 +15,7 @@ const envBoolean = (defaultValue: boolean) =>
 
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL es requerida"),
+  DB_SCHEMA: z.literal("schema_auth"),
   /** PKCS#8 PEM (RSA). Firmar access tokens (RS256). No compartir fuera del servicio. */
   JWT_PRIVATE_KEY: pemFromEnv.refine(
     (pem) => pem.includes("BEGIN PRIVATE KEY"),
@@ -30,6 +32,16 @@ const envSchema = z.object({
   JWT_ISS: z.string().min(1).optional(),
   /** Redis opcional: si está definido, la cola de emails BullMQ funciona con reintento distribuido. */
   REDIS_URL: z.string().url().optional(),
+  /** Costo de hashing para bcrypt. */
+  BCRYPT_ROUNDS: z.coerce.number().int().min(4).max(31).default(12),
+  /** TTL del Access Token en segundos (para firmas JWT). */
+  ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(28800),
+  /** TTL del Refresh Token en milisegundos (para cookies/sesiones). */
+  REFRESH_TOKEN_TTL_MS: z.coerce.number().int().positive().default(604800000),
+  /** TTL de códigos de restablecimiento de contraseña en milisegundos. */
+  PASSWORD_RESET_TTL_MS: z.coerce.number().int().positive().default(3600000),
+  /** TTL de enlaces de verificación de email en milisegundos. */
+  EMAIL_VERIFY_TTL_MS: z.coerce.number().int().positive().default(172800000),
   /** Tras N intentos fallidos por cuenta se bloquea temporalmente. */
   LOGIN_LOCKOUT_MAX_ATTEMPTS: z.coerce.number().int().min(3).max(50).default(15),
   LOGIN_LOCKOUT_DURATION_MS: z.coerce
@@ -94,11 +106,24 @@ const envSchema = z.object({
   /** Días de retención de tokens usados/revocados antes de borrarlos. */
   TOKEN_CLEANUP_RETENTION_DAYS: z.coerce.number().int().min(1).max(365).default(30),
   /** Intervalo del worker de limpieza (ms). Por defecto 24 h. */
-  TOKEN_CLEANUP_INTERVAL_MS: z.coerce
-    .number()
-    .int()
-    .positive()
-    .default(24 * 60 * 60 * 1000),
+    TOKEN_CLEANUP_INTERVAL_MS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(24 * 60 * 60 * 1000),
+    AUTH_EVENTS_STREAM_KEY: z.string().default("auth:events"),
+    AUTH_EVENTS_STREAM_MAXLEN: z.coerce.number().int().min(1000).default(10000),
+    IDENTITY_OUTBOX_INTERVAL_MS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(5000),
+    IDENTITY_OUTBOX_BATCH_SIZE: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(500)
+      .default(50),
   })
   .superRefine((data, ctx) => {
     if (data.TRUST_GATEWAY_JWT_HEADERS && !data.GATEWAY_TRUST_SECRET) {
@@ -144,8 +169,8 @@ const envSchema = z.object({
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
-  console.error("❌ Variables de entorno inválidas:");
-  console.error(parsed.error.flatten().fieldErrors);
+  const logger = getLogger();
+  logger.error({ fieldErrors: parsed.error.flatten().fieldErrors }, "Variables de entorno inválidas");
   process.exit(1);
 }
 

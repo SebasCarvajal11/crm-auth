@@ -63,14 +63,17 @@ async function seed() {
           role: user.role,
           emailVerifiedAt: new Date(),
         })
-        .onConflictDoNothing()
+        .onConflictDoUpdate({
+          target: users.email,
+          set: { passwordHash, role: user.role },
+        })
         .returning({ email: users.email, subject: users.subject, role: users.role });
 
       if (created) {
         createdUsers.push(created);
-        console.log(`Creado: ${user.email} (${user.role})`);
+        console.log(`Creado/Actualizado: ${user.email} (${user.role})`);
       } else {
-        console.log(`Ya existe: ${user.email}`);
+        console.log(`No se pudo actualizar: ${user.email}`);
       }
     } catch (error) {
       console.error(`Error creando ${user.email}:`, error);

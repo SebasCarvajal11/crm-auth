@@ -75,7 +75,7 @@ async function main() {
 
   const redis = getRedisConnection();
   if (redis) {
-    const keys = await redis.keys("ratelimit:*");
+    const keys = await redis.keys("*:ratelimit:*");
     if (keys.length > 0) {
       await redis.del(...keys);
     }

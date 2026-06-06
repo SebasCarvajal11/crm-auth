@@ -2,69 +2,82 @@ import { createMiddleware } from "hono/factory";
 import type { AppEnv } from "./auth.middleware";
 import { TooManyRequestsError } from "./error-handler.middleware";
 import { getRedisConnection } from "../redis";
+import { getLogger } from "../logger";
 
-interface RateRecord {
-  count: number;
-  resetAt: number;
-}
+const logger = getLogger();
 
-const memoryAttempts = new Map<string, RateRecord>();
-
-const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
-let lastCleanup = Date.now();
-
-function cleanupExpired(now: number) {
-  if (now - lastCleanup < CLEANUP_INTERVAL_MS) return;
-  lastCleanup = now;
-  for (const [key, record] of memoryAttempts) {
-    if (record.resetAt <= now) {
-      memoryAttempts.delete(key);
-    }
-  }
-}
-
-function checkMemoryLimit(
-  bucketKey: string,
-  now: number,
-  opts: { maxAttempts: number; windowMs: number },
-): void {
-  cleanupExpired(now);
-  const record = memoryAttempts.get(bucketKey);
-  if (record && record.resetAt > now) {
-    if (record.count >= opts.maxAttempts) {
-      throw new TooManyRequestsError(
-        "Demasiados intentos desde esta IP. Intenta más tarde.",
-      );
-    }
-    record.count++;
-  } else {
-    memoryAttempts.set(bucketKey, { count: 1, resetAt: now + opts.windowMs });
+async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timeoutId: NodeJS.Timeout;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error("Redis command timeout")), ms);
+  });
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    clearTimeout(timeoutId!);
   }
 }
 
 async function checkRedisLimit(
   bucketKey: string,
   opts: { maxAttempts: number; windowMs: number },
-): Promise<boolean> {
+): Promise<void> {
   const redis = getRedisConnection();
-  if (!redis) return false;
-
-  const key = `ratelimit:${bucketKey}`;
-  try {
-    const count = await redis.incr(key);
-    if (count === 1) {
-      await redis.pexpire(key, opts.windowMs);
+  if (redis && redis.status !== "ready") {
+    if (redis.status === "connecting" || redis.status === "wait") {
+      await new Promise<void>((resolve) => {
+        const onReady = () => {
+          redis.off("ready", onReady);
+          redis.off("error", onError);
+          resolve();
+        };
+        const onError = () => {
+          redis.off("ready", onReady);
+          redis.off("error", onError);
+          resolve();
+        };
+        redis.on("ready", onReady);
+        redis.on("error", onError);
+        setTimeout(() => {
+          redis.off("ready", onReady);
+          redis.off("error", onError);
+          resolve();
+        }, 1500);
+      });
     }
+  }
+
+  if (!redis || redis.status !== "ready") {
+    logger.error({ topic: "rate-limit", redisStatus: redis?.status ?? "none" }, "CRITICAL: Redis connection is not ready. Fail-closed enforced.");
+    throw new TooManyRequestsError("Servicio de rate limiting temporalmente no disponible.");
+  }
+
+  const key = `auth:ratelimit:${bucketKey}`;
+  try {
+    const result = await withTimeout(
+      redis.eval(
+        `local current = redis.call('incr', KEYS[1])
+         if tonumber(current) == 1 then
+           redis.call('pexpire', KEYS[1], ARGV[1])
+         end
+         return current`,
+        1,
+        key,
+        opts.windowMs,
+      ) as Promise<unknown>,
+      1000,
+    );
+    const count = typeof result === "number" ? result : Number(result);
+
     if (count > opts.maxAttempts) {
       throw new TooManyRequestsError(
         "Demasiados intentos desde esta IP. Intenta más tarde.",
       );
     }
-    return true;
   } catch (err) {
     if (err instanceof TooManyRequestsError) throw err;
-    console.error("[rate-limit] Redis no disponible, usando memoria local:", err);
-    return false;
+    logger.error({ err, topic: "rate-limit" }, "CRITICAL: Redis connectivity failure. Fail-closed enforced");
+    throw new TooManyRequestsError("Servicio de rate limiting temporalmente no disponible.");
   }
 }
 
@@ -78,13 +91,10 @@ export function ipRateLimit(opts: { maxAttempts: number; windowMs: number }) {
       c.req.header("x-real-ip") ??
       "unknown";
     const bucketKey = `${c.req.path}:${ip}`;
-    const now = Date.now();
 
-    const usedRedis = await checkRedisLimit(bucketKey, opts);
-    if (!usedRedis) {
-      checkMemoryLimit(bucketKey, now, opts);
-    }
+    await checkRedisLimit(bucketKey, opts);
 
     await next();
   });
 }
+

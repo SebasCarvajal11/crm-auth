@@ -7,9 +7,12 @@ import Redis from "ioredis";
 import { env } from "../config/env";
 import { EMAIL_QUEUE_NAME } from "../queues/email.queue";
 import { processTransactionalEmailJob } from "../queues/email.processor";
+import { getLogger } from "../shared/logger";
+
+const logger = getLogger();
 
 if (!env.REDIS_URL) {
-  console.error("❌ worker:email requiere REDIS_URL");
+  logger.error({ topic: "worker:email" }, "REDIS_URL is required");
   process.exit(1);
 }
 
@@ -22,19 +25,20 @@ const worker = new Worker(
   processTransactionalEmailJob,
   {
     connection,
+    prefix: "auth",
     concurrency: 5,
   }
 );
 
 worker.on("failed", (job, err) => {
-  console.error(`[worker:email] falló job ${job?.id}`, err?.message);
+  logger.error({ err, topic: "worker:email", jobId: job?.id }, "job failed");
 });
 
 worker.on("completed", (job) => {
-  console.log(`[worker:email] enviado ${job.id}`);
+  logger.info({ topic: "worker:email", jobId: job.id }, "enviado");
 });
 
-console.log(`📧 Worker de correo escuchando cola "${EMAIL_QUEUE_NAME}"`);
+logger.info({ topic: "worker:email", queue: EMAIL_QUEUE_NAME }, "escuchando cola");
 
 const shutdown = async () => {
   await worker.close();

@@ -8,9 +8,11 @@ import {
   bigserial,
   primaryKey,
   integer,
+  index,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
+import type { AuthIdentityEvent } from "@sebascarvajal11/cima-contracts/auth-identity-events";
 
 export const authSchema = pgSchema("schema_auth");
 
@@ -58,6 +60,8 @@ export const invitations = authSchema.table("invitations", {
   lastName: varchar("last_name", { length: 120 }),
   clientKind: clientKindEnum("client_kind"),
   companyName: varchar("company_name", { length: 160 }),
+  role: roleEnum("role").default("client").notNull(),
+  profession: varchar("profession", { length: 160 }),
   token: varchar("token", { length: 255 }).unique().notNull(),
   createdBy: uuid("created_by").notNull().references(() => users.id),
   acceptedAt: timestamp("accepted_at", { mode: "date" }),
@@ -95,6 +99,27 @@ export const auditLogs = authSchema.table(
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   },
   (t) => [primaryKey({ columns: [t.id, t.createdAt] })]
+);
+
+export const identityOutbox = authSchema.table(
+  "identity_outbox",
+  {
+    id: uuid("id").primaryKey().$defaultFn(() => uuidv7()),
+    eventType: varchar("event_type", { length: 80 }).notNull(),
+    aggregateId: uuid("aggregate_id").notNull(),
+    payload: jsonb("payload").$type<AuthIdentityEvent>().notNull(),
+    status: varchar("status", { length: 20 }).default("pending").notNull(),
+    attempts: integer("attempts").default(0).notNull(),
+    availableAt: timestamp("available_at", { mode: "date" }).defaultNow().notNull(),
+    publishedAt: timestamp("published_at", { mode: "date" }),
+    lastError: varchar("last_error", { length: 1000 }),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [
+    index("identity_outbox_status_available_idx").on(t.status, t.availableAt),
+    index("identity_outbox_aggregate_idx").on(t.aggregateId),
+  ]
 );
 
 export const usersRelations = relations(users, ({ many }) => ({

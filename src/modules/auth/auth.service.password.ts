@@ -1,6 +1,6 @@
 import { hash, compare } from "bcrypt";
 import { randomBytes } from "crypto";
-import type { UsersRepository } from "../users/users.repository";
+import type { PasswordRepository } from "./ports/auth-repositories.port";
 import type { EmailJobPublisher } from "../../email/transactional-email.types";
 import { env } from "../../config/env";
 import {
@@ -9,18 +9,23 @@ import {
   ConflictError,
 } from "../../shared/middlewares/error-handler.middleware";
 import { BCRYPT_ROUNDS, PASSWORD_RESET_TTL_MS } from "./auth.constants";
+import { getLogger } from "../../shared/logger";
 
-export const createPasswordMethods = (
-  repo: UsersRepository,
+const logger = getLogger();
+
+export const createPasswordService = (
+  repo: PasswordRepository,
   mail: EmailJobPublisher
 ) => ({
   forgotPassword: async (email: string, ip: string, userAgent: string) => {
     const user = await repo.findByEmail(email);
 
     if (!user || !user.isActive) {
-      await repo.createAuditLog(null, "password_reset_requested", ip, userAgent, {
-        email,
-        found: false,
+      await repo.transaction(async (txRepo) => {
+        await txRepo.createAuditLog(null, "password_reset_requested", ip, userAgent, {
+          email,
+          found: false,
+        });
       });
       return;
     }
@@ -32,10 +37,12 @@ export const createPasswordMethods = (
       if (latest?.createdAt) {
         const elapsed = now - latest.createdAt.getTime();
         if (elapsed < minIntervalMs) {
-          await repo.createAuditLog(user.id, "password_reset_throttled_interval", ip, userAgent, {
-            email,
-            min_interval_ms: minIntervalMs,
-            elapsed_ms: elapsed,
+          await repo.transaction(async (txRepo) => {
+            await txRepo.createAuditLog(user.id, "password_reset_throttled_interval", ip, userAgent, {
+              email,
+              min_interval_ms: minIntervalMs,
+              elapsed_ms: elapsed,
+            });
           });
           return;
         }
@@ -44,10 +51,12 @@ export const createPasswordMethods = (
       const since = new Date(now - 24 * 60 * 60 * 1000);
       const issuedInLastDay = await repo.countPasswordResetsForUserSince(user.id, since);
       if (issuedInLastDay >= env.PASSWORD_RESET_MAX_PER_DAY) {
-        await repo.createAuditLog(user.id, "password_reset_throttled_daily_limit", ip, userAgent, {
-          email,
-          max_per_day: env.PASSWORD_RESET_MAX_PER_DAY,
-          issued_in_last_24h: issuedInLastDay,
+        await repo.transaction(async (txRepo) => {
+          await txRepo.createAuditLog(user.id, "password_reset_throttled_daily_limit", ip, userAgent, {
+            email,
+            max_per_day: env.PASSWORD_RESET_MAX_PER_DAY,
+            issued_in_last_24h: issuedInLastDay,
+          });
         });
         return;
       }
@@ -55,13 +64,15 @@ export const createPasswordMethods = (
 
     const rawToken = randomBytes(32).toString("hex");
 
-    await repo.createPasswordReset({
-      userId: user.id,
-      token: rawToken,
-      expiresAt: new Date(Date.now() + PASSWORD_RESET_TTL_MS),
-    });
+    await repo.transaction(async (txRepo) => {
+      await txRepo.createPasswordReset({
+        userId: user.id,
+        token: rawToken,
+        expiresAt: new Date(Date.now() + PASSWORD_RESET_TTL_MS),
+      });
 
-    await repo.createAuditLog(user.id, "password_reset_requested", ip, userAgent);
+      await txRepo.createAuditLog(user.id, "password_reset_requested", ip, userAgent);
+    });
 
     mail
       .enqueue({
@@ -69,7 +80,7 @@ export const createPasswordMethods = (
         to: user.email,
         token: rawToken,
       })
-      .catch((err) => console.error("[mail enqueue forgot]", err));
+      .catch((err) => logger.error({ err, topic: "mail enqueue forgot" }, "enqueue failed"));
 
     return env.NODE_ENV === "test" ? { token: rawToken } : undefined;
   },
@@ -80,28 +91,30 @@ export const createPasswordMethods = (
     ip: string,
     userAgent: string
   ) => {
-    const resetRecord = await repo.findPasswordResetByToken(token);
-    if (!resetRecord) throw new NotFoundError("Token de recuperación inválido");
-    if (resetRecord.isUsed) throw new ConflictError("Este token ya fue utilizado");
-    if (resetRecord.expiresAt < new Date()) throw new UnauthorizedError("El token ha expirado");
+    await repo.transaction(async (tx) => {
+      const resetRecord = await tx.findPasswordResetByToken(token);
+      if (!resetRecord) throw new NotFoundError("Token de recuperación inválido");
+      if (resetRecord.isUsed) throw new ConflictError("Este token ya fue utilizado");
+      if (resetRecord.expiresAt < new Date()) throw new UnauthorizedError("El token ha expirado");
 
-    const userAccount = await repo.findById(resetRecord.userId);
-    if (!userAccount) throw new NotFoundError("Usuario no disponible");
+      const userAccount = await tx.findById(resetRecord.userId);
+      if (!userAccount) throw new NotFoundError("Usuario no disponible");
 
-    const passwordHash = await hash(newPassword, BCRYPT_ROUNDS);
+      const passwordHash = await hash(newPassword, BCRYPT_ROUNDS);
 
-    await repo.updateUserById(resetRecord.userId, {
-      passwordHash,
-      failedLoginAttempts: 0,
-      lockedUntil: null,
-      forcePasswordChange: false,
+      await tx.updateUserById(resetRecord.userId, {
+        passwordHash,
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+        forcePasswordChange: false,
+      });
+      await tx.revokeAllRefreshTokensForUser(resetRecord.userId);
+      await tx.markPasswordResetAsUsed(resetRecord.id);
+      await tx.invalidateUnusedPasswordResetsForUser(resetRecord.userId);
+      await tx.invalidateUnusedEmailVerificationsForUser(resetRecord.userId);
+
+      await tx.createAuditLog(resetRecord.userId, "password_reset_completed", ip, userAgent);
     });
-    await repo.revokeAllRefreshTokensForUser(resetRecord.userId);
-    await repo.markPasswordResetAsUsed(resetRecord.id);
-    await repo.invalidateUnusedPasswordResetsForUser(resetRecord.userId);
-    await repo.invalidateUnusedEmailVerificationsForUser(resetRecord.userId);
-
-    await repo.createAuditLog(resetRecord.userId, "password_reset_completed", ip, userAgent);
   },
 
   changePassword: async (
@@ -111,26 +124,28 @@ export const createPasswordMethods = (
     ip: string,
     userAgent: string
   ) => {
-    const user = await repo.findById(userId);
-    if (!user || !user.isActive) {
-      throw new UnauthorizedError("Usuario no disponible");
-    }
+    await repo.transaction(async (tx) => {
+      const user = await tx.findById(userId);
+      if (!user || !user.isActive) {
+        throw new UnauthorizedError("Usuario no disponible");
+      }
 
-    const valid = await compare(oldPassword, user.passwordHash);
-    if (!valid) {
-      throw new UnauthorizedError("Contraseña actual incorrecta");
-    }
+      const valid = await compare(oldPassword, user.passwordHash);
+      if (!valid) {
+        throw new UnauthorizedError("Contraseña actual incorrecta");
+      }
 
-    const passwordHash = await hash(newPassword, BCRYPT_ROUNDS);
-    await repo.updateUserById(userId, {
-      passwordHash,
-      failedLoginAttempts: 0,
-      lockedUntil: null,
-      forcePasswordChange: false,
+      const passwordHash = await hash(newPassword, BCRYPT_ROUNDS);
+      await tx.updateUserById(userId, {
+        passwordHash,
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+        forcePasswordChange: false,
+      });
+      await tx.revokeAllRefreshTokensForUser(userId);
+      await tx.invalidateUnusedPasswordResetsForUser(userId);
+      await tx.invalidateUnusedEmailVerificationsForUser(userId);
+      await tx.createAuditLog(userId, "password_changed_known_old", ip, userAgent);
     });
-    await repo.revokeAllRefreshTokensForUser(userId);
-    await repo.invalidateUnusedPasswordResetsForUser(userId);
-    await repo.invalidateUnusedEmailVerificationsForUser(userId);
-    await repo.createAuditLog(userId, "password_changed_known_old", ip, userAgent);
   },
 });
