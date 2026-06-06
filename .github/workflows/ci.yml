@@ -34,6 +34,7 @@ jobs:
 
     env:
       DATABASE_URL: postgres://root:rootpassword@127.0.0.1:5432/crm_database
+      DB_SCHEMA: schema_auth
       NODE_ENV: test
       EXPOSE_TEMP_PASSWORDS: "true"
       PORT: "3000"
