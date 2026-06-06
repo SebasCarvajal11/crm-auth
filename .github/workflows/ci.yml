@@ -99,6 +99,9 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Validate OpenAPI contract
+        run: pnpm openapi:check
+
       - name: Prepare schema
         run: pnpm db:push
 

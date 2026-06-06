@@ -19,6 +19,7 @@
     "db:partition-audit-migrate": "tsx src/db/scripts/migrate-audit-logs-partitioned.ts",
     "db:ensure-audit-partitions": "tsx src/db/scripts/run-ensure-audit-partitions.ts",
     "jwt:gen-keys": "tsx src/scripts/gen-jwt-keys.ts",
+    "openapi:check": "node scripts/validate-openapi.mjs",
     "test": "tsx src/scripts/run-hurl-suite.ts",
     "test:rate-limit": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-rate-limit.ps1",
     "test:unit": "vitest run"
@@ -56,6 +57,7 @@
     "@types/nodemailer": "^8.0.0",
     "@types/pg": "^8.20.0",
     "drizzle-kit": "^0.31.10",
+    "openapi-typescript": "^7.13.0",
     "typescript": "^5.8.3",
     "vitest": "^4.1.8"
   }

@@ -156,6 +156,7 @@ paths:
                     required: [access_token]
                     properties:
                       access_token:
+                        type: string
         "401":
           $ref: "#/components/responses/Unauthorized"
 
