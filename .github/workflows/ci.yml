@@ -31,9 +31,19 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
 
     env:
       DATABASE_URL: postgres://root:rootpassword@127.0.0.1:5432/crm_database
+      REDIS_URL: redis://127.0.0.1:6379
       DB_SCHEMA: schema_auth
       NODE_ENV: test
       EXPOSE_TEMP_PASSWORDS: "true"
@@ -83,6 +93,7 @@ jobs:
           const esc = (pem) => JSON.stringify(pem.trimEnd());
           const lines = [
             `DATABASE_URL=${process.env.DATABASE_URL}`,
+            `REDIS_URL=${process.env.REDIS_URL}`,
             `NODE_ENV=${process.env.NODE_ENV}`,
             `EXPOSE_TEMP_PASSWORDS=${process.env.EXPOSE_TEMP_PASSWORDS}`,
             `PORT=${process.env.PORT}`,
