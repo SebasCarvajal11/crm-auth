@@ -29,7 +29,6 @@ Ver [`.env.example`](./.env.example) para la lista completa.
 
 ```bash
 pnpm install
-pnpm db:bootstrap        # crear schema_auth y rol en Postgres
 pnpm db:push             # aplicar migraciones Drizzle
 pnpm dev                 # servidor con hot-reload en :3000
 ```
@@ -39,7 +38,7 @@ Endpoints útiles:
 - Health: `http://localhost:3000/health`
 - Métricas: `http://localhost:3000/metrics`
 - JWKS: `http://localhost:3000/.well-known/jwks.json`
-- OpenAPI: `http://localhost:3000/openapi.json`
+- OpenAPI: `http://localhost:3000/openapi.yaml`
 
 Workers (procesos separados):
 
