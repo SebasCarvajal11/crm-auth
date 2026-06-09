@@ -72,16 +72,6 @@ const envSchema = z.object({
    * (SPA con prefijo /api: /api/auth/refresh). Si llamas a mod-auth en :3000 sin proxy, usa /auth/refresh.
    */
   REFRESH_COOKIE_PATH: z.string().min(1).default("/api/auth/refresh"),
-  /** @deprecated Ya no se usa — validación JWKS directa. Mantenido por compatibilidad temporal. */
-  TRUST_GATEWAY_JWT_HEADERS: z.preprocess(
-    (v) => (v === "" || v === undefined ? "false" : v),
-    z.union([
-      z.literal("true"),
-      z.literal("false"),
-      z.literal("1"),
-      z.literal("0"),
-    ])
-  ).transform((v) => v === "true" || v === "1"),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   MOD_AUTH_CORS: z
     .union([z.literal("true"), z.literal("false")])

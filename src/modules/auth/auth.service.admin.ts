@@ -170,22 +170,4 @@ export const createAdminUserService = (repo: AdminUserRepository) => ({
       await tx.createIdentityOutboxEvent("user.updated", updated);
     });
   },
-
-  listActiveUsersForBootstrap: async () => {
-    const { rows } = await repo.listUsersPaginated({
-      page: 1,
-      limit: 100000,
-      includeDeleted: false,
-    });
-    return rows.map((u: AdminUserListRow) => ({
-      subject: u.subject,
-      email: u.email,
-      role: u.role,
-      first_name: u.firstName,
-      last_name: u.lastName,
-      client_kind: u.clientKind,
-      company_name: u.companyName,
-      profession: u.profession,
-    }));
-  },
 });
