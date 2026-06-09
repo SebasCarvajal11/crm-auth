@@ -29,6 +29,7 @@ export function toAuthIdentityEvent(
 ): AuthIdentityEvent {
   return {
     version: AUTH_IDENTITY_EVENT_CONTRACT_VERSION,
+    contractVersion: AUTH_IDENTITY_EVENT_CONTRACT_VERSION,
     type,
     userSub: user.subject,
     email: user.email,

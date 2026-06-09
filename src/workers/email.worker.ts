@@ -8,6 +8,7 @@ import { env } from "../config/env";
 import { EMAIL_QUEUE_NAME } from "../queues/email.queue";
 import { processTransactionalEmailJob } from "../queues/email.processor";
 import { getLogger } from "../shared/logger";
+import { startWorkerHealthcheck } from "../shared/worker-health";
 
 const logger = getLogger();
 
@@ -24,11 +25,14 @@ const worker = new Worker(
   EMAIL_QUEUE_NAME,
   processTransactionalEmailJob,
   {
-    connection,
+    connection: connection as any,
     prefix: "auth",
     concurrency: 5,
   }
 );
+
+// Start worker healthcheck (monitoring Redis connection only, no direct pool here)
+const healthcheck = startWorkerHealthcheck("email-worker", { redis: connection });
 
 worker.on("failed", (job, err) => {
   logger.error({ err, topic: "worker:email", jobId: job?.id }, "job failed");
@@ -41,6 +45,7 @@ worker.on("completed", (job) => {
 logger.info({ topic: "worker:email", queue: EMAIL_QUEUE_NAME }, "escuchando cola");
 
 const shutdown = async () => {
+  healthcheck.stop();
   await worker.close();
   await connection.quit();
   process.exit(0);

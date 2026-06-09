@@ -7,6 +7,8 @@ import {
   type AuthIdentityProjection,
 } from "../../auth/ports/identity-event-publisher.port";
 
+import { traceStorage } from "../../../shared/logger";
+
 const RETRYABLE_STATUSES = ["pending", "failed"] as const;
 
 function nextAvailableAt(attempts: number): Date {
@@ -25,6 +27,10 @@ export const createIdentityOutboxRepository = (conn: DbOrTx) => ({
     user: AuthIdentityProjection
   ) => {
     const event = toAuthIdentityEvent(type, user);
+    const store = traceStorage.getStore();
+    if (store?.traceId) {
+      event.traceId = store.traceId;
+    }
     await conn.insert(identityOutbox).values({
       eventType: event.type,
       aggregateId: event.userSub,
@@ -44,6 +50,19 @@ export const createIdentityOutboxRepository = (conn: DbOrTx) => ({
       )
       .orderBy(asc(identityOutbox.createdAt))
       .limit(limit);
+  },
+
+  countPendingIdentityOutboxEvents: async (now = new Date()) => {
+    const [row] = await conn
+      .select({ count: sql<number>`cast(count(*) as int)` })
+      .from(identityOutbox)
+      .where(
+        and(
+          inArray(identityOutbox.status, [...RETRYABLE_STATUSES]),
+          lte(identityOutbox.availableAt, now)
+        )
+      );
+    return row?.count ?? 0;
   },
 
   markIdentityOutboxPublished: async (id: string) => {

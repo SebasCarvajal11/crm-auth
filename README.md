@@ -1,53 +1,81 @@
 # CRM Auth
 
-`crm-auth` is the identity and access service for CIMA CRM.
+> Servicio de identidad y acceso para CIMA CRM.
 
-## Scope
+## Propósito
 
-- login, refresh, logout, and profile identity
-- worker registration and client invitation flows
-- password reset and email verification
-- JWT issuance and JWKS exposure
-- auth audit logging and session/token lifecycle
+`crm-auth` es la única fuente de verdad para identidad en la plataforma CIMA CRM. Gestiona autenticación, ciclo de vida de sesiones, flujos de invitación, recuperación de contraseña, emisión de JWTs y auditoría de accesos. Ningún otro servicio tiene autoridad sobre credenciales o identidad de usuarios.
 
-## Local Development
+## Entorno
+
+```bash
+cp .env.example .env
+# Completar: DATABASE_URL, REDIS_URL, JWT_PRIVATE_KEY, JWT_PUBLIC_KEY, JWT_KID
+```
+
+| Variable | Descripción | Requerida |
+|----------|-------------|-----------|
+| `DATABASE_URL` | Conexión PostgreSQL (`schema_auth`) | ✅ |
+| `REDIS_URL` | Redis para stream de identidad y BullMQ | ✅ |
+| `JWT_PRIVATE_KEY` | Clave RSA privada para firmar JWTs | ✅ |
+| `JWT_PUBLIC_KEY` | Clave RSA pública (derivada de la privada) | ✅ |
+| `JWT_KID` | Key ID del par RSA activo | ✅ |
+| `SERVICE_VERSION` | Versión semver del servicio | ✅ |
+| `SMTP_*` | Configuración de transporte de email | Opcional |
+
+Ver [`.env.example`](./.env.example) para la lista completa.
+
+## Local
 
 ```bash
 pnpm install
-pnpm db:push
-pnpm dev
+pnpm db:bootstrap        # crear schema_auth y rol en Postgres
+pnpm db:push             # aplicar migraciones Drizzle
+pnpm dev                 # servidor con hot-reload en :3000
 ```
 
-Useful commands:
+Endpoints útiles:
 
-- `pnpm worker:email`
-- `pnpm worker:identity-outbox`
-- `pnpm worker:cleanup`
-- `pnpm cleanup:tokens`
-- `pnpm db:seed`
-- `pnpm build`
-- `pnpm test`
-- `pnpm test:rate-limit`
+- Health: `http://localhost:3000/health`
+- Métricas: `http://localhost:3000/metrics`
+- JWKS: `http://localhost:3000/.well-known/jwks.json`
+- OpenAPI: `http://localhost:3000/openapi.json`
 
-Health check: `http://localhost:3000/health`
+Workers (procesos separados):
 
-JWKS: `http://localhost:3000/.well-known/jwks.json`
+```bash
+pnpm worker:email            # envío de emails transaccionales (BullMQ)
+pnpm worker:identity-outbox  # publica eventos de identidad a Redis Stream
+pnpm worker:cleanup          # limpieza de tokens expirados
+```
 
-## Environment
+Utilidades:
 
-Start from [`./.env.example`](./.env.example).
+```bash
+pnpm jwt:gen-keys            # generar nuevo par RSA
+pnpm db:seed                 # poblar DB con datos de prueba
+pnpm test:rate-limit         # test de límite de velocidad
+```
 
-Required runtime areas:
+## Deploy
 
-- database connectivity
-- JWT key material and `JWT_KID`
-- optional Redis for queue-backed email delivery
-- gateway trust settings when the service participates in trusted internal flows
-- public app URL and mail transport settings
+```bash
+# Desde crm-infra/
+./deploy/remote/deploy-component.sh auth
+```
 
-## Contract and Verification
+El script aplica migraciones, rota el slot inactivo (blue/green) y verifica health antes del cutover. Ver [crm-infra/ONBOARDING.md](../crm-infra/ONBOARDING.md).
 
-- OpenAPI source: [`./openapi/openapi.yaml`](./openapi/openapi.yaml)
-- Hurl contract tests live under `tests/`
+## Tests
 
-For local Hurl runs that rely on temporary-password exposure, use test-only settings such as `NODE_ENV=test` and `EXPOSE_TEMP_PASSWORDS=true` only for the test execution window.
+```bash
+pnpm test:unit    # unitarios Vitest (validadores Zod, lógica pura)
+pnpm test         # contrato Hurl contra gateway (requiere stack local)
+```
+
+Cobertura mínima: validadores, flujos de login/refresh/logout, contrato HTTP por endpoint público.
+
+## Contrato público
+
+- OpenAPI: [`openapi/openapi.yaml`](./openapi/openapi.yaml)
+- Gateway manifest: [`gateway/gateway.manifest.json`](./gateway/gateway.manifest.json)

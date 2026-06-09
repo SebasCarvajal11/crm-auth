@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import type SMTPTransport from "nodemailer/lib/smtp-transport";
 import { env } from "../config/env";
+import { withRetry } from "@sebascarvajal11/cima-contracts";
 import type { TransactionalEmailJob } from "./transactional-email.types";
 import { renderTransactionalEmail } from "./transactional-email.templates";
 import { getLogger } from "../shared/logger";
@@ -58,7 +59,12 @@ const sendRaw = async (opts: {
   }
 
   const transport = await ensureSmtpReady();
-  await transport.sendMail(payload);
+  await withRetry(async () => {
+    await transport.sendMail(payload);
+  }, {
+    maxAttempts: 3,
+    delayMs: 200,
+  });
 };
 
 export const sendTransactionalEmail = async (

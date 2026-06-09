@@ -1,4 +1,4 @@
-CREATE SCHEMA "schema_auth";
+CREATE SCHEMA IF NOT EXISTS "schema_auth";
 --> statement-breakpoint
 CREATE TYPE "schema_auth"."client_kind" AS ENUM('natural', 'juridical');--> statement-breakpoint
 CREATE TYPE "schema_auth"."role" AS ENUM('admin', 'worker', 'client');--> statement-breakpoint

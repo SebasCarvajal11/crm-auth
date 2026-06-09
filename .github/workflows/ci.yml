@@ -5,120 +5,18 @@ on:
   pull_request:
   workflow_dispatch:
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-auth-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build-and-test:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-
-    services:
-      postgres:
-        image: postgres:15-alpine
-        env:
-          POSTGRES_USER: root
-          POSTGRES_PASSWORD: rootpassword
-          POSTGRES_DB: crm_database
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U root -d crm_database"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 20
-
-    env:
-      DATABASE_URL: postgres://root:rootpassword@127.0.0.1:5432/crm_database
-      REDIS_URL: redis://127.0.0.1:6379
-      DB_SCHEMA: schema_auth
-      NODE_ENV: test
-      EXPOSE_TEMP_PASSWORDS: "true"
-      PORT: "3000"
-      REFRESH_COOKIE_PATH: /auth/refresh
-      MAIL_TRANSPORT: log
-      APP_PUBLIC_URL: http://localhost:5173
-      ADMIN_INVITE_SECRET: test-admin-secret-123
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: 11.1.1
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Install Hurl
-        shell: bash
-        run: |
-          HURL_VERSION=7.1.0
-          sudo apt-get update
-          curl --location --remote-name "https://github.com/Orange-OpenSource/hurl/releases/download/${HURL_VERSION}/hurl_${HURL_VERSION}_amd64.deb"
-          sudo apt-get install -y "./hurl_${HURL_VERSION}_amd64.deb"
-
-      - name: Create CI env file
-        shell: bash
-        run: |
-          node <<'NODE'
-          const fs = require('node:fs');
-          const { generateKeyPairSync } = require('node:crypto');
-          const { privateKey, publicKey } = generateKeyPairSync('rsa', {
-            modulusLength: 2048,
-            publicKeyEncoding: { type: 'spki', format: 'pem' },
-            privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
-          });
-          const esc = (pem) => JSON.stringify(pem.trimEnd());
-          const lines = [
-            `DATABASE_URL=${process.env.DATABASE_URL}`,
-            `REDIS_URL=${process.env.REDIS_URL}`,
-            `NODE_ENV=${process.env.NODE_ENV}`,
-            `EXPOSE_TEMP_PASSWORDS=${process.env.EXPOSE_TEMP_PASSWORDS}`,
-            `PORT=${process.env.PORT}`,
-            `REFRESH_COOKIE_PATH=${process.env.REFRESH_COOKIE_PATH}`,
-            `MAIL_TRANSPORT=${process.env.MAIL_TRANSPORT}`,
-            `APP_PUBLIC_URL=${process.env.APP_PUBLIC_URL}`,
-            `ADMIN_INVITE_SECRET=${process.env.ADMIN_INVITE_SECRET}`,
-            `JWT_PRIVATE_KEY=${esc(privateKey)}`,
-            `JWT_PUBLIC_KEY=${esc(publicKey)}`,
-            'JWT_KID=mod-auth-rsa-1',
-          ];
-          fs.writeFileSync('.env', `${lines.join('\n')}\n`);
-          NODE
-
-      - name: Build
-        run: pnpm build
-
-      - name: Validate OpenAPI contract
-        run: pnpm openapi:check
-
-      - name: Prepare schema
-        run: pnpm db:push
-
-      - name: Run test suite
-        run: pnpm test
-
-      - name: Build production image
-        run: docker build -t crm-auth:ci .
+  validate:
+    uses: SebasCarvajal11/crm-infra/.github/workflows/reusable-ci.yml@main
+    with:
+      component: auth
+      runs_db: true
+      runs_redis: true
+      db_schema: schema_auth
+      test_command: pnpm test
+      install_hurl: true
+    secrets: inherit

@@ -5,7 +5,7 @@ import type {
   EmailJobPublisher,
   TransactionalEmailJob,
 } from "../email/transactional-email.types";
-import { getLogger } from "../shared/logger";
+import { getLogger, traceStorage } from "../shared/logger";
 
 const logger = getLogger();
 
@@ -19,7 +19,7 @@ export const getEmailQueue = (): Queue<TransactionalEmailJob> | undefined => {
   if (!conn) return undefined;
   if (!emailQueue) {
     emailQueue = new Queue<TransactionalEmailJob>(QUEUE_NAME, {
-      connection: conn,
+      connection: conn as any,
       prefix: "auth",
       defaultJobOptions: {
         attempts: 5,
@@ -41,6 +41,10 @@ export const EMAIL_QUEUE_NAME = QUEUE_NAME;
 export function createEmailJobPublisher(): EmailJobPublisher {
   return {
     enqueue: async (job: TransactionalEmailJob) => {
+      const traceId = traceStorage.getStore();
+      if (traceId) {
+        (job as any).traceId = traceId;
+      }
       const queue = getEmailQueue();
       try {
         if (queue) {

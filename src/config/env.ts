@@ -1,6 +1,7 @@
 import { z } from "zod";
 import "dotenv/config";
 import { getLogger } from "../shared/logger";
+import { STREAM_CONVENTIONS } from "@sebascarvajal11/cima-contracts";
 
 const pemFromEnv = z
   .string()
@@ -16,6 +17,7 @@ const envBoolean = (defaultValue: boolean) =>
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL es requerida"),
   DB_SCHEMA: z.literal("schema_auth"),
+  SERVICE_VERSION: z.string().default("1.0.0"),
   /** PKCS#8 PEM (RSA). Firmar access tokens (RS256). No compartir fuera del servicio. */
   JWT_PRIVATE_KEY: pemFromEnv.refine(
     (pem) => pem.includes("BEGIN PRIVATE KEY"),
@@ -63,17 +65,14 @@ const envSchema = z.object({
     .max(20)
     .default(3),
   PORT: z.coerce.number().default(3000),
+  LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).optional(),
+  SERVICE_NAME: z.string().optional(),
   /**
    * Path del cookie httpOnly de refresh. Debe coincidir con la ruta que usa el navegador
    * (SPA con prefijo /api: /api/auth/refresh). Si llamas a mod-auth en :3000 sin proxy, usa /auth/refresh.
    */
   REFRESH_COOKIE_PATH: z.string().min(1).default("/api/auth/refresh"),
-  /**
-   * Si es true y GATEWAY_TRUST_SECRET coincide con la cabecera `X-Gateway-Trust` que inyecta KrakenD,
-   * `authMiddleware` confía en los claims propagados (X-User-*) y omite verificar de nuevo el JWT.
-   * Desactivado por defecto (doble verificación RS256: gateway + mod-auth).
-   */
-  /** Por defecto false si la variable no está definida (desarrollo local). */
+  /** @deprecated Ya no se usa — validación JWKS directa. Mantenido por compatibilidad temporal. */
   TRUST_GATEWAY_JWT_HEADERS: z.preprocess(
     (v) => (v === "" || v === undefined ? "false" : v),
     z.union([
@@ -83,9 +82,12 @@ const envSchema = z.object({
       z.literal("0"),
     ])
   ).transform((v) => v === "true" || v === "1"),
-  /** Secreto compartido con KrakenD (Martian `X-Gateway-Trust`). Obligatorio si TRUST_GATEWAY_JWT_HEADERS. */
-  GATEWAY_TRUST_SECRET: z.string().min(32).optional(),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+  MOD_AUTH_CORS: z
+    .union([z.literal("true"), z.literal("false")])
+    .default("false")
+    .transform((v) => v === "true"),
+  CORS_ORIGIN: z.string().default("http://localhost:5173"),
   /**
    * Solo para suites automatizadas locales: incluir `temp_password` en register-worker / invite-admin.
    * Requiere además NODE_ENV=test. Nunca activar en entornos accesibles.
@@ -111,8 +113,12 @@ const envSchema = z.object({
       .int()
       .positive()
       .default(24 * 60 * 60 * 1000),
-    AUTH_EVENTS_STREAM_KEY: z.string().default("auth:events"),
+    AUTH_EVENTS_STREAM_KEY: z.string().default(STREAM_CONVENTIONS.streams.identity.events),
     AUTH_EVENTS_STREAM_MAXLEN: z.coerce.number().int().min(1000).default(10000),
+    AUDIT_EVENTS_STREAM_KEY: z.string().optional(),
+    AUDIT_EVENTS_STREAM_MAXLEN: z.coerce.number().int().optional(),
+    AUTH_REQUESTS_STREAM_KEY: z.string().default(STREAM_CONVENTIONS.streams.identity.replayRequests),
+    AUTH_REQUESTS_CONSUMER_GROUP: z.string().default(STREAM_CONVENTIONS.groups.auth.identityReplayRequests),
     IDENTITY_OUTBOX_INTERVAL_MS: z.coerce
       .number()
       .int()
@@ -124,16 +130,15 @@ const envSchema = z.object({
       .min(1)
       .max(500)
       .default(50),
+    RATE_LIMIT_LOGIN_MAX: z.coerce.number().int().positive().default(20),
+    RATE_LIMIT_LOGIN_WINDOW_MS: z.coerce.number().int().positive().default(15 * 60 * 1000),
+    RATE_LIMIT_VERIFY_EMAIL_MAX: z.coerce.number().int().positive().default(10),
+    RATE_LIMIT_VERIFY_EMAIL_WINDOW_MS: z.coerce.number().int().positive().default(60 * 60 * 1000),
+    RATE_LIMIT_FORGOT_PASSWORD_MAX: z.coerce.number().int().positive().default(5),
+    RATE_LIMIT_FORGOT_PASSWORD_WINDOW_MS: z.coerce.number().int().positive().default(60 * 60 * 1000),
   })
   .superRefine((data, ctx) => {
-    if (data.TRUST_GATEWAY_JWT_HEADERS && !data.GATEWAY_TRUST_SECRET) {
-      ctx.addIssue({
-        code: "custom",
-        message:
-          "GATEWAY_TRUST_SECRET es obligatorio cuando TRUST_GATEWAY_JWT_HEADERS=true (mínimo 32 caracteres)",
-        path: ["GATEWAY_TRUST_SECRET"],
-      });
-    }
+
     if (data.MAIL_TRANSPORT === "smtp") {
       if (!data.SMTP_HOST) {
         ctx.addIssue({

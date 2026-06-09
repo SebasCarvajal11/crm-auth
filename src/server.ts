@@ -3,12 +3,15 @@ import { env } from "./config/env";
 import { pool } from "./db/connection";
 import { ensureAuditLogPartitions } from "./db/scripts/ensure-audit-log-partitions";
 import { getLogger } from "./shared/logger";
+import { initRedis } from "./shared/redis";
 
 const logger = getLogger();
 
 await ensureAuditLogPartitions(pool).catch((err) =>
   logger.error({ err, topic: "audit_logs" }, "ensure partitions failed")
 );
+
+if (process.env.REDIS_URL) initRedis(process.env.REDIS_URL);
 
 const { createApp } = await import("./app");
 const app = createApp();

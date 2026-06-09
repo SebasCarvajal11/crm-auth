@@ -9,12 +9,21 @@ import {
   primaryKey,
   integer,
   index,
+  serial,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
 import type { AuthIdentityEvent } from "@sebascarvajal11/cima-contracts/auth-identity-events";
 
 export const authSchema = pgSchema("schema_auth");
+
+export const schemaVersion = authSchema.table("schema_version", {
+  id: serial("id").primaryKey(),
+  version: varchar("version", { length: 50 }).notNull(),
+  appliedBy: varchar("applied_by", { length: 100 }).notNull(),
+  appliedAt: timestamp("applied_at", { mode: "date", withTimezone: true }).defaultNow().notNull(),
+  source: varchar("source", { length: 255 }).notNull(),
+});
 
 export const roleEnum = authSchema.enum("role", ["admin", "worker", "client"]);
 export const clientKindEnum = authSchema.enum("client_kind", ["natural", "juridical"]);
@@ -91,10 +100,15 @@ export const auditLogs = authSchema.table(
   "audit_logs",
   {
     id: bigserial("id", { mode: "number" }).notNull(),
-    userId: uuid("user_id"),
-    action: varchar("action", { length: 100 }).notNull(),
+    actorSub: uuid("actor_sub"),
+    actorEmail: varchar("actor_email", { length: 255 }),
+    actorRole: varchar("actor_role", { length: 20 }),
+    action: varchar("action", { length: 120 }).notNull(),
+    resourceType: varchar("resource_type", { length: 80 }).notNull(),
+    resourceId: varchar("resource_id", { length: 255 }),
     ipAddress: varchar("ip_address", { length: 45 }),
     userAgent: varchar("user_agent", { length: 500 }),
+    correlationId: uuid("correlation_id"),
     details: jsonb("details"),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   },

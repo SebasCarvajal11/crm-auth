@@ -6,9 +6,6 @@ import {
   UnauthorizedError,
   ForbiddenError,
 } from "./error-handler.middleware";
-import { getLogger } from "../logger";
-
-const logger = getLogger();
 
 export interface JwtPayload {
   sub: string;
@@ -32,79 +29,7 @@ export type AppEnv = {
   };
 };
 
-/**
- * KrakenD ya validó el JWT e inyectó claims; si `TRUST_GATEWAY_JWT_HEADERS` y `X-Gateway-Trust`
- * coinciden con `GATEWAY_TRUST_SECRET`, evitamos una segunda verificación RS256 en mod-auth.
- */
-function payloadFromTrustedGateway(c: {
-  req: { header: (name: string) => string | undefined; path: string };
-}): JwtPayload | null {
-  if (!env.TRUST_GATEWAY_JWT_HEADERS || !env.GATEWAY_TRUST_SECRET) {
-    return null;
-  }
-
-  // Deshabilitar la confianza de cabeceras para rutas administrativas críticas de mod-auth
-  const isCriticalRoute =
-    c.req.path.startsWith("/users") ||
-    c.req.path.startsWith("/auth/register-worker") ||
-    c.req.path.startsWith("/auth/invite-admin") ||
-    c.req.path.startsWith("/auth/invite-client");
-
-  if (isCriticalRoute) {
-    return null;
-  }
-
-  if (c.req.header("X-Gateway-Trust") !== env.GATEWAY_TRUST_SECRET) {
-    return null;
-  }
-
-  const sub = c.req.header("X-User-Sub")?.trim();
-  const userId = c.req.header("X-User-Id")?.trim();
-  const roleRaw = c.req.header("X-User-Role")?.trim();
-  const email = c.req.header("X-User-Email")?.trim();
-  const expHeader = c.req.header("X-Token-Exp")?.trim();
-
-  if (!sub || !userId || !roleRaw || !email) {
-    return null;
-  }
-  if (!isRole(roleRaw)) {
-    return null;
-  }
-
-  let exp = expHeader ? Number.parseInt(expHeader, 10) : Number.NaN;
-  if (!Number.isFinite(exp)) {
-    exp = Math.floor(Date.now() / 1000) + 900;
-  }
-
-  const forceRaw = c.req.header("X-User-Force-Pwd")?.trim().toLowerCase();
-
-  return {
-    sub,
-    userId,
-    role: roleRaw,
-    email,
-    exp,
-    ...(forceRaw === "true" ? { force_password_change: true } : {}),
-  };
-}
-
 export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
-  if (env.TRUST_GATEWAY_JWT_HEADERS && env.GATEWAY_TRUST_SECRET) {
-    const trustHeader = c.req.header("X-Gateway-Trust");
-    if (!trustHeader) {
-      logger.warn({ topic: "auth" }, "X-Gateway-Trust header missing — falling back to JWT verification");
-    } else if (trustHeader !== env.GATEWAY_TRUST_SECRET) {
-      logger.warn({ topic: "auth" }, "X-Gateway-Trust mismatch — falling back to JWT verification");
-    }
-  }
-
-  const trusted = payloadFromTrustedGateway(c);
-  if (trusted) {
-    c.set("user", trusted);
-    await next();
-    return;
-  }
-
   const authHeader = c.req.header("Authorization");
 
   if (!authHeader?.startsWith("Bearer ")) {

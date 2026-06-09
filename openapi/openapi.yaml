@@ -338,6 +338,37 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
+  /auth/invite-admin:
+    post:
+      tags: [Auth — Administración]
+      summary: Invitar administrador por correo (admin)
+      security:
+        - bearerAuth: []
+      operationId: inviteAdmin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InviteAdminRequest"
+      responses:
+        "201":
+          description: Invitación de admin creada y procesada
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                properties:
+                  message:
+                    type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
   /auth/invite-client:
     post:
       tags: [Auth - Administracion]
@@ -472,6 +503,40 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/MessageSuccess"
+  /users/search:
+    get:
+      tags: [Usuarios — Admin]
+      summary: Buscar usuarios por query (email)
+      security:
+        - bearerAuth: []
+      operationId: adminSearchUsers
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [admin, worker, client]
+      responses:
+        "200":
+          description: Resultados de la búsqueda
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/IdentityUser"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
   /users/:
     get:
       tags: [Usuarios — Admin]
@@ -791,6 +856,20 @@ components:
         email:
           type: string
           format: email
+
+    InviteAdminRequest:
+      type: object
+      required: [email, first_name, last_name, secret_password]
+      properties:
+        email:
+          type: string
+          format: email
+        first_name:
+          type: string
+        last_name:
+          type: string
+        secret_password:
+          type: string
 
     AcceptInviteRequest:
       type: object

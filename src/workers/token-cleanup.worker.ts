@@ -1,10 +1,9 @@
-/**
- * Limpieza periódica de refresh tokens, resets, verificaciones e invitaciones obsoletas.
- * Ejecutar: pnpm worker:cleanup
- */
 import { env } from "../config/env";
 import { runTokenCleanup } from "../jobs/run-token-cleanup";
 import { getLogger } from "../shared/logger";
+import { startWorkerHealthcheck } from "../shared/worker-health";
+import { pool } from "../db/connection";
+import { getRedisConnection } from "../shared/redis";
 
 const logger = getLogger();
 
@@ -31,10 +30,17 @@ logger.info(
   "started",
 );
 
+// Start worker healthcheck (monitoring both DB and Redis)
+const healthcheck = startWorkerHealthcheck("token-cleanup-worker", {
+  pool,
+  redis: getRedisConnection(),
+});
+
 await tick();
 const timer = setInterval(tick, intervalMs);
 
 const shutdown = () => {
+  healthcheck.stop();
   clearInterval(timer);
   process.exit(0);
 };

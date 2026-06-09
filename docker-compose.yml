@@ -1,0 +1,88 @@
+services:
+  crm-auth:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      CONTAINER_MODE: server
+      DATABASE_URL: postgresql://auth_user:${AUTH_DB_PASSWORD:-authpassword}@postgres_db:5432/crm_database
+      DB_SCHEMA: schema_auth
+      PORT: 3000
+      REDIS_URL: redis://redis:6379
+      TRUST_GATEWAY_JWT_HEADERS: "false"
+      REFRESH_COOKIE_PATH: /api/v1/auth/refresh
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      shared_backplane:
+        aliases:
+          - auth
+
+  crm-auth-email-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: ["pnpm", "worker:email"]
+    env_file:
+      - .env
+    environment:
+      CONTAINER_MODE: worker
+      DATABASE_URL: postgresql://auth_user:${AUTH_DB_PASSWORD:-authpassword}@postgres_db:5432/crm_database
+      DB_SCHEMA: schema_auth
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      crm-auth:
+        condition: service_healthy
+    networks:
+      - shared_backplane
+
+  crm-auth-identity-outbox-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: ["pnpm", "worker:identity-outbox"]
+    env_file:
+      - .env
+    environment:
+      CONTAINER_MODE: worker
+      DATABASE_URL: postgresql://auth_user:${AUTH_DB_PASSWORD:-authpassword}@postgres_db:5432/crm_database
+      DB_SCHEMA: schema_auth
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      crm-auth:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - shared_backplane
+
+  crm-auth-token-cleanup-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: ["pnpm", "worker:cleanup"]
+    env_file:
+      - .env
+    environment:
+      CONTAINER_MODE: worker
+      DATABASE_URL: postgresql://auth_user:${AUTH_DB_PASSWORD:-authpassword}@postgres_db:5432/crm_database
+      DB_SCHEMA: schema_auth
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      crm-auth:
+        condition: service_healthy
+    networks:
+      - shared_backplane
+
+networks:
+  shared_backplane:
+    name: cima-crm-local-backplane

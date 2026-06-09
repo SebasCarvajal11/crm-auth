@@ -36,7 +36,7 @@ export const createAuthRoutes = (services: AuthServices) => {
 
   authRoutes.post(
     "/login",
-    ipRateLimit({ maxAttempts: 20, windowMs: 15 * 60 * 1000 }),
+    ipRateLimit({ maxAttempts: env.RATE_LIMIT_LOGIN_MAX, windowMs: env.RATE_LIMIT_LOGIN_WINDOW_MS }),
     zValidator("json", LoginRequestSchema),
     authController.login
   );
@@ -69,7 +69,7 @@ export const createAuthRoutes = (services: AuthServices) => {
 
   authRoutes.post(
     "/verify-email",
-    ipRateLimit({ maxAttempts: 10, windowMs: 60 * 60 * 1000 }),
+    ipRateLimit({ maxAttempts: env.RATE_LIMIT_VERIFY_EMAIL_MAX, windowMs: env.RATE_LIMIT_VERIFY_EMAIL_WINDOW_MS }),
     zValidator("json", VerifyEmailSchema),
     authController.verifyEmail
   );
@@ -120,7 +120,7 @@ export const createAuthRoutes = (services: AuthServices) => {
 
   authRoutes.post(
     "/forgot-password",
-    ipRateLimit({ maxAttempts: 5, windowMs: 60 * 60 * 1000 }),
+    ipRateLimit({ maxAttempts: env.RATE_LIMIT_FORGOT_PASSWORD_MAX, windowMs: env.RATE_LIMIT_FORGOT_PASSWORD_WINDOW_MS }),
     zValidator("json", ForgotPasswordSchema),
     authController.forgotPassword
   );
@@ -138,15 +138,6 @@ export const createAuthRoutes = (services: AuthServices) => {
   authRoutes.get("/me", authMiddleware, authController.me);
   /** Versión plana para BFF aggregation (sin wrapper `data`). */
   authRoutes.get("/me/flat", authMiddleware, authController.meFlat);
-
-  authRoutes.get("/bootstrap-identities", async (c) => {
-    const trustSecret = c.req.header("X-Gateway-Trust");
-    if (!trustSecret || trustSecret !== env.GATEWAY_TRUST_SECRET) {
-      return c.json({ error: "Acceso no autorizado" }, 401);
-    }
-    const list = await services.adminUserService.listActiveUsersForBootstrap();
-    return c.json({ data: list });
-  });
 
   return authRoutes;
 };

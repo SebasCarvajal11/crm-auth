@@ -1,0 +1,218 @@
+{
+  "service": "auth",
+  "version": "1.0.0",
+  "endpoints": [
+    {
+      "endpoint": "/health",
+      "method": "GET",
+      "backend_url": "/health",
+      "public": true,
+      "openapi_ref": "GET /health"
+    },
+    {
+      "endpoint": "/.well-known/jwks.json",
+      "method": "GET",
+      "backend_url": "/.well-known/jwks.json",
+      "public": true,
+      "openapi_ref": "GET /.well-known/jwks.json"
+    },
+    {
+      "endpoint": "/docs/auth/openapi.yaml",
+      "method": "GET",
+      "backend_url": "/openapi.yaml",
+      "public": true,
+      "openapi_ref": "GET /openapi.yaml"
+    },
+    {
+      "endpoint": "/docs/auth/v1/openapi.yaml",
+      "method": "GET",
+      "backend_url": "/openapi.yaml",
+      "public": true,
+      "openapi_ref": "GET /openapi.yaml"
+    },
+    {
+      "endpoint": "/api/v1/auth/login",
+      "method": "POST",
+      "backend_url": "/api/v1/auth/login",
+      "rate_limit": {
+        "client_max_rate": 200,
+        "client_capacity": 200,
+        "every": "15m",
+        "strategy": "ip"
+      },
+      "public": true,
+      "openapi_ref": "POST /auth/login"
+    },
+    {
+      "endpoint": "/api/v1/auth/refresh",
+      "method": "POST",
+      "backend_url": "/api/v1/auth/refresh",
+      "extra_headers": ["Cookie"],
+      "public": true,
+      "openapi_ref": "POST /auth/refresh"
+    },
+    {
+      "endpoint": "/api/v1/auth/forgot-password",
+      "method": "POST",
+      "backend_url": "/api/v1/auth/forgot-password",
+      "rate_limit": {
+        "client_max_rate": 3,
+        "client_capacity": 3,
+        "every": "1h",
+        "strategy": "ip"
+      },
+      "public": true,
+      "openapi_ref": "POST /auth/forgot-password"
+    },
+    {
+      "endpoint": "/api/v1/auth/reset-password",
+      "method": "POST",
+      "backend_url": "/api/v1/auth/reset-password",
+      "rate_limit": {
+        "client_max_rate": 5,
+        "client_capacity": 5,
+        "every": "1h",
+        "strategy": "ip"
+      },
+      "public": true,
+      "openapi_ref": "POST /auth/reset-password"
+    },
+    {
+      "endpoint": "/api/v1/auth/accept-invite/{token}",
+      "method": "GET",
+      "backend_url": "/api/v1/auth/accept-invite/{token}",
+      "public": true,
+      "openapi_ref": "GET /auth/accept-invite/{token}"
+    },
+    {
+      "endpoint": "/api/v1/auth/accept-invite",
+      "method": "POST",
+      "backend_url": "/api/v1/auth/accept-invite",
+      "rate_limit": {
+        "client_max_rate": 5,
+        "client_capacity": 5,
+        "every": "1h",
+        "strategy": "ip"
+      },
+      "public": true,
+      "openapi_ref": "POST /auth/accept-invite"
+    },
+    {
+      "endpoint": "/api/v1/auth/verify-email",
+      "method": "POST",
+      "backend_url": "/api/v1/auth/verify-email",
+      "rate_limit": {
+        "client_max_rate": 10,
+        "client_capacity": 10,
+        "every": "1h",
+        "strategy": "ip"
+      },
+      "public": true,
+      "openapi_ref": "POST /auth/verify-email"
+    },
+    {
+      "endpoint": "/api/v1/identity/me",
+      "method": "GET",
+      "backend_url": "/auth/me",
+      "openapi_ref": "GET /auth/me"
+    },
+    {
+      "endpoint": "/api/v1/identity/logout",
+      "method": "POST",
+      "backend_url": "/auth/logout",
+      "extra_headers": [
+        "Cookie"
+      ],
+      "openapi_ref": "POST /auth/logout"
+    },
+    {
+      "endpoint": "/api/v1/identity/search",
+      "method": "GET",
+      "backend_url": "/users/search",
+      "input_query_strings": [
+        "q",
+        "role"
+      ],
+      "openapi_ref": "GET /users/search"
+    },
+    {
+      "endpoint": "/api/v1/account/password",
+      "method": "POST",
+      "backend_url": "/auth/change-password",
+      "openapi_ref": "POST /auth/change-password"
+    },
+    {
+      "endpoint": "/api/v1/account/sessions",
+      "method": "GET",
+      "backend_url": "/auth/sessions",
+      "openapi_ref": "GET /auth/sessions"
+    },
+    {
+      "endpoint": "/api/v1/account/sessions/{familyId}",
+      "method": "DELETE",
+      "backend_url": "/auth/sessions/{familyId}",
+      "openapi_ref": "DELETE /auth/sessions/{familyId}"
+    },
+    {
+      "endpoint": "/api/v1/account/verify-email/request",
+      "method": "POST",
+      "backend_url": "/auth/request-email-verification",
+      "openapi_ref": "POST /auth/request-email-verification"
+    },
+    {
+      "endpoint": "/api/v1/admin/workers",
+      "method": "POST",
+      "backend_url": "/auth/register-worker",
+      "openapi_ref": "POST /auth/register-worker"
+    },
+    {
+      "endpoint": "/api/v1/admin/admins/invite",
+      "method": "POST",
+      "backend_url": "/auth/invite-admin",
+      "openapi_ref": "POST /auth/invite-admin"
+    },
+    {
+      "endpoint": "/api/v1/admin/clients/invite",
+      "method": "POST",
+      "backend_url": "/auth/invite-client",
+      "openapi_ref": "POST /auth/invite-client"
+    },
+    {
+      "endpoint": "/api/v1/admin/users",
+      "method": "GET",
+      "backend_url": "/users",
+      "input_query_strings": [
+        "page",
+        "limit",
+        "role",
+        "include_deleted",
+        "q"
+      ],
+      "openapi_ref": "GET /users"
+    },
+    {
+      "endpoint": "/api/v1/admin/users/{subject}/status",
+      "method": "PATCH",
+      "backend_url": "/users/{subject}/status",
+      "openapi_ref": "PATCH /users/{subject}/status"
+    },
+    {
+      "endpoint": "/api/v1/admin/users/{subject}/flags",
+      "method": "PATCH",
+      "backend_url": "/users/{subject}/flags",
+      "openapi_ref": "PATCH /users/{subject}/flags"
+    },
+    {
+      "endpoint": "/api/v1/admin/users/{subject}/restore",
+      "method": "POST",
+      "backend_url": "/users/{subject}/restore",
+      "openapi_ref": "POST /users/{subject}/restore"
+    },
+    {
+      "endpoint": "/api/v1/admin/users/{subject}",
+      "method": "DELETE",
+      "backend_url": "/users/{subject}",
+      "openapi_ref": "DELETE /users/{subject}"
+    }
+  ]
+}

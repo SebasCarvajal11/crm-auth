@@ -1,0 +1,2 @@
+ALTER TABLE "schema_auth"."invitations" ADD COLUMN "role" "schema_auth"."role" DEFAULT 'client' NOT NULL;--> statement-breakpoint
+ALTER TABLE "schema_auth"."invitations" ADD COLUMN "profession" varchar(160);
