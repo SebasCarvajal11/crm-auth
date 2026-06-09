@@ -87,7 +87,6 @@ export const createApp = () => {
 
   publicRoutes.route("/", createOpenApiRoutes());
   publicRoutes.route("/", createAuthRoutes(authServices));
-  publicRoutes.route("/auth", createAuthRoutes(authServices)); // legacy
   publicRoutes.route("/api/v1/auth", createAuthRoutes(authServices));
   
   app.route("/", publicRoutes);
@@ -103,7 +102,6 @@ export const createApp = () => {
   authenticatedRoutes.use("*", authMiddleware);
   
   authenticatedRoutes.route("/api/v1/auth/users", createUsersAdminRoutes(authServices.adminUserService));
-  authenticatedRoutes.route("/users", createUsersAdminRoutes(authServices.adminUserService)); // legacy
   
   app.route("/", authenticatedRoutes);
 
