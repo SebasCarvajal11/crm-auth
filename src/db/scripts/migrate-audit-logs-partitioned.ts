@@ -58,10 +58,15 @@ async function main() {
     await client.query(`
       CREATE TABLE schema_auth.audit_logs (
         id BIGSERIAL NOT NULL,
-        user_id UUID,
-        action VARCHAR(100) NOT NULL,
+        actor_sub UUID,
+        actor_email VARCHAR(255),
+        actor_role VARCHAR(20),
+        action VARCHAR(120) NOT NULL,
+        resource_type VARCHAR(80) NOT NULL,
+        resource_id VARCHAR(255),
         ip_address VARCHAR(45),
         user_agent VARCHAR(500),
+        correlation_id UUID,
         details JSONB,
         created_at TIMESTAMP NOT NULL DEFAULT NOW(),
         PRIMARY KEY (id, created_at)
@@ -108,8 +113,33 @@ async function main() {
     }
 
     await client.query(`
-      INSERT INTO schema_auth.audit_logs (id, user_id, action, ip_address, user_agent, details, created_at)
-      SELECT id, user_id, action, ip_address, user_agent, details, created_at
+      INSERT INTO schema_auth.audit_logs (
+        id,
+        actor_sub,
+        actor_email,
+        actor_role,
+        action,
+        resource_type,
+        resource_id,
+        ip_address,
+        user_agent,
+        correlation_id,
+        details,
+        created_at
+      )
+      SELECT
+        id,
+        actor_sub,
+        actor_email,
+        actor_role,
+        action,
+        resource_type,
+        resource_id,
+        ip_address,
+        user_agent,
+        correlation_id,
+        details,
+        created_at
       FROM schema_auth.audit_logs_legacy
     `);
 
