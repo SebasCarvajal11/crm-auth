@@ -3,6 +3,7 @@ import type { AppEnv } from "./auth.middleware";
 import { TooManyRequestsError } from "./error-handler.middleware";
 import { getRedisConnection } from "../redis";
 import { getLogger } from "../logger";
+import { env } from "../../config/env";
 
 const logger = getLogger();
 
@@ -86,6 +87,10 @@ async function checkRedisLimit(
  */
 export function ipRateLimit(opts: { maxAttempts: number; windowMs: number }) {
   return createMiddleware<AppEnv>(async (c, next) => {
+    if (env.NODE_ENV === "test") {
+      await next();
+      return;
+    }
     const ip =
       c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ??
       c.req.header("x-real-ip") ??

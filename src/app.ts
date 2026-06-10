@@ -65,7 +65,7 @@ export const createApp = () => {
   // --- (a) Grupo de Rutas Públicas ---
   const publicRoutes = new Hono<AppEnv>();
 
-  publicRoutes.get("/health", async (c) => {
+  publicRoutes.get("/api/v1/health", async (c) => {
     const [pg, redis] = await Promise.all([
       checkPostgres(pool),
       checkRedis(getRedisConnection()),
@@ -77,23 +77,22 @@ export const createApp = () => {
     return c.json(body, status);
   });
 
-  publicRoutes.get("/metrics", metricsEndpointHandler(serviceMetrics.registry));
+  publicRoutes.get("/api/v1/metrics", metricsEndpointHandler(serviceMetrics.registry));
 
-  publicRoutes.get("/.well-known/jwks.json", (c) =>
+  publicRoutes.get("/api/v1/.well-known/jwks.json", (c) =>
     c.json(getJwksDocument(), 200, {
       "Cache-Control": "public, max-age=300",
     })
   );
 
-  publicRoutes.route("/", createOpenApiRoutes());
-  publicRoutes.route("/", createAuthRoutes(authServices));
+  publicRoutes.route("/api/v1", createOpenApiRoutes());
   publicRoutes.route("/api/v1/auth", createAuthRoutes(authServices));
   
   app.route("/", publicRoutes);
 
   // --- (b) Grupo de Rutas Internas ---
   const internalRoutes = new Hono<AppEnv>();
-  internalRoutes.route("/", createGatewayRoutes());
+  internalRoutes.route("/api/v1", createGatewayRoutes());
   
   app.route("/", internalRoutes);
 

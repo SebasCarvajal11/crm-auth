@@ -33,7 +33,7 @@ tags:
     description: Listado y gestión de cuentas (admin)
 
 paths:
-  /health:
+  /api/v1/health:
     get:
       tags: [Sistema]
       summary: Health check
@@ -54,7 +54,7 @@ paths:
                     type: string
                     example: mod-auth
 
-  /.well-known/jwks.json:
+  /api/v1/.well-known/jwks.json:
     get:
       tags: [Sistema]
       summary: JWKS (clave pública RS256 para validadores / KrakenD)
@@ -68,7 +68,7 @@ paths:
                 type: object
                 description: Contiene `keys` con `kid`, `kty`, `n`, `e`, `alg`, `use`
 
-  /openapi.yaml:
+  /api/v1/openapi.yaml:
     get:
       tags: [Documentación]
       summary: Especificación OpenAPI (YAML)
@@ -82,7 +82,7 @@ paths:
                 type: string
                 format: binary
 
-  /docs:
+  /api/v1/docs:
     get:
       tags: [Documentación]
       summary: Swagger UI (documentación interactiva)
@@ -95,7 +95,7 @@ paths:
               schema:
                 type: string
 
-  /auth/login:
+  /api/v1/auth/login:
     post:
       tags: [Auth — Pública]
       summary: Iniciar sesión
@@ -130,7 +130,7 @@ paths:
         "429":
           $ref: "#/components/responses/TooManyRequests"
 
-  /auth/refresh:
+  /api/v1/auth/refresh:
     post:
       tags: [Auth — Pública]
       summary: Renovar access token (cookie refresh_token)
@@ -160,7 +160,7 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
-  /auth/logout:
+  /api/v1/auth/logout:
     post:
       tags: [Auth — Sesión]
       summary: Cerrar sesión actual
@@ -175,7 +175,7 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
-  /auth/me:
+  /api/v1/auth/me:
     get:
       tags: [Auth — Sesión]
       summary: Identidad del usuario autenticado
@@ -198,7 +198,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /auth/change-password:
+  /api/v1/auth/change-password:
     post:
       tags: [Auth — Sesión]
       summary: Cambiar contraseña
@@ -217,7 +217,7 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
-  /auth/sessions:
+  /api/v1/auth/sessions:
     get:
       tags: [Auth — Sesión]
       summary: Listar sesiones activas del usuario
@@ -245,7 +245,7 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
-  /auth/sessions/{familyId}:
+  /api/v1/auth/sessions/{familyId}:
     delete:
       tags: [Auth — Sesión]
       summary: Revocar una sesión por familia de refresh tokens
@@ -268,7 +268,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /auth/request-email-verification:
+  /api/v1/auth/request-email-verification:
     post:
       tags: [Auth — Sesión]
       summary: Solicitar correo de verificación
@@ -289,7 +289,7 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
-  /auth/verify-email:
+  /api/v1/auth/verify-email:
     post:
       tags: [Auth — Pública]
       summary: Confirmar correo con token
@@ -304,7 +304,7 @@ paths:
         "200":
           $ref: "#/components/responses/MessageSuccess"
 
-  /auth/register-worker:
+  /api/v1/auth/register-worker:
     post:
       tags: [Auth — Administración]
       summary: Registrar trabajador (admin)
@@ -338,7 +338,7 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
-  /auth/invite-admin:
+  /api/v1/auth/invite-admin:
     post:
       tags: [Auth — Administración]
       summary: Invitar administrador por correo (admin)
@@ -369,7 +369,7 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
-  /auth/invite-client:
+  /api/v1/auth/invite-client:
     post:
       tags: [Auth - Administracion]
       summary: Invitar cliente por correo (admin)
@@ -401,7 +401,7 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
-  /auth/accept-invite/{token}:
+  /api/v1/auth/accept-invite/{token}:
     get:
       tags: [Auth - Publica]
       summary: Datos de la invitacion (email)
@@ -432,7 +432,7 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
-  /auth/accept-invite:
+  /api/v1/auth/accept-invite:
     post:
       tags: [Auth - Publica]
       summary: Aceptar invitacion y crear cuenta cliente
@@ -466,7 +466,7 @@ paths:
         "409":
           $ref: "#/components/responses/Conflict"
 
-  /auth/forgot-password:
+  /api/v1/auth/forgot-password:
     post:
       tags: [Auth - Publica]
       summary: Solicitar recuperacion de contrasena
@@ -489,7 +489,7 @@ paths:
                   message:
                     type: string
 
-  /auth/reset-password:
+  /api/v1/auth/reset-password:
     post:
       tags: [Auth - Publica]
       summary: Restablecer contrasena con token
@@ -503,7 +503,7 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/MessageSuccess"
-  /users/search:
+  /api/v1/auth/users/search:
     get:
       tags: [Usuarios — Admin]
       summary: Buscar usuarios por query (email)
@@ -537,7 +537,7 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
-  /users/:
+  /api/v1/auth/users/:
     get:
       tags: [Usuarios — Admin]
       summary: Listar usuarios (paginado)
@@ -582,7 +582,7 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
-  /users/{subject}/status:
+  /api/v1/auth/users/{subject}/status:
     patch:
       tags: [Usuarios — Admin]
       summary: Activar o desactivar usuario
@@ -607,7 +607,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /users/{subject}/flags:
+  /api/v1/auth/users/{subject}/flags:
     patch:
       tags: [Usuarios — Admin]
       summary: Forzar cambio de contraseña en próximo login
@@ -632,7 +632,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /users/{subject}/restore:
+  /api/v1/auth/users/{subject}/restore:
     post:
       tags: [Usuarios — Admin]
       summary: Restaurar usuario archivado (soft-delete)
@@ -651,7 +651,7 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /users/{subject}:
+  /api/v1/auth/users/{subject}:
     delete:
       tags: [Usuarios — Admin]
       summary: Archivar usuario (soft-delete)

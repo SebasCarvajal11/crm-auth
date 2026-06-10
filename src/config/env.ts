@@ -69,9 +69,9 @@ const envSchema = z.object({
   SERVICE_NAME: z.string().optional(),
   /**
    * Path del cookie httpOnly de refresh. Debe coincidir con la ruta que usa el navegador
-   * (SPA con prefijo /api: /api/auth/refresh). Si llamas a mod-auth en :3000 sin proxy, usa /auth/refresh.
+   * (SPA con prefijo /api/v1: /api/v1/auth/refresh).
    */
-  REFRESH_COOKIE_PATH: z.string().min(1).default("/api/auth/refresh"),
+  REFRESH_COOKIE_PATH: z.string().min(1).default("/api/v1/auth/refresh"),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   MOD_AUTH_CORS: z
     .union([z.literal("true"), z.literal("false")])

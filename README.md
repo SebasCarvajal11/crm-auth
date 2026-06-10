@@ -35,10 +35,10 @@ pnpm dev                 # servidor con hot-reload en :3000
 
 Endpoints útiles:
 
-- Health: `http://localhost:3000/health`
-- Métricas: `http://localhost:3000/metrics`
-- JWKS: `http://localhost:3000/.well-known/jwks.json`
-- OpenAPI: `http://localhost:3000/openapi.yaml`
+- Health: `http://localhost:3000/api/v1/health`
+- Métricas: `http://localhost:3000/api/v1/metrics`
+- JWKS: `http://localhost:3000/api/v1/.well-known/jwks.json`
+- OpenAPI: `http://localhost:3000/api/v1/openapi.yaml`
 
 Workers (procesos separados):
 

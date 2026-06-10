@@ -1,10 +1,16 @@
-FROM node:22-alpine
+ARG NODE_IMAGE=node:22-alpine
+ARG PNPM_VERSION=11.1.1
+
+FROM ${NODE_IMAGE}
 WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@11.1.1 --activate
+ENV CI=true
+RUN apk add --no-cache tini \
+  && corepack enable \
+  && corepack prepare pnpm@${PNPM_VERSION} --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY tsconfig.json ./
 COPY cima-contracts ./cima-contracts
-RUN pnpm install --prod --frozen-lockfile
+RUN pnpm install --frozen-lockfile && pnpm prune --prod --ignore-scripts
 COPY src ./src
 COPY drizzle.config.ts ./
 COPY drizzle ./drizzle
@@ -19,5 +25,5 @@ USER nodejs
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD ["docker-healthcheck.sh"]
-ENTRYPOINT ["docker-entrypoint.sh"]
+ENTRYPOINT ["tini", "--", "docker-entrypoint.sh"]
 CMD ["pnpm", "start"]

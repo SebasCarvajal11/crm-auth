@@ -3,6 +3,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:-node:22-alpine}
+        PNPM_VERSION: ${PNPM_VERSION:-11.1.1}
+    init: true
     restart: unless-stopped
     env_file:
       - .env
@@ -28,6 +32,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:-node:22-alpine}
+        PNPM_VERSION: ${PNPM_VERSION:-11.1.1}
+    init: true
     restart: unless-stopped
     command: ["pnpm", "worker:email"]
     env_file:
@@ -47,6 +55,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:-node:22-alpine}
+        PNPM_VERSION: ${PNPM_VERSION:-11.1.1}
+    init: true
     restart: unless-stopped
     command: ["pnpm", "worker:identity-outbox"]
     env_file:
@@ -68,6 +80,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:-node:22-alpine}
+        PNPM_VERSION: ${PNPM_VERSION:-11.1.1}
+    init: true
     restart: unless-stopped
     command: ["pnpm", "worker:cleanup"]
     env_file:

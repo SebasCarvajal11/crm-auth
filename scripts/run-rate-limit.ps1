@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 
 # Esperar a que el servicio esté saludable y Redis listo
-$healthUrl = "http://localhost:3000/health"
+$healthUrl = "http://localhost:3000/api/v1/health"
 Write-Host "Waiting for auth service health check at $healthUrl ..."
 for ($i = 0; $i -lt 30; $i++) {
     try {

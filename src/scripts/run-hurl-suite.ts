@@ -33,13 +33,13 @@ function runCommand(
 async function waitForHealth(baseUrl: string, attempts = 30, delayMs = 1000) {
   for (let index = 0; index < attempts; index += 1) {
     try {
-      const response = await fetch(`${baseUrl}/health`);
+      const response = await fetch(`${baseUrl}/api/v1/health`);
       if (response.ok) return;
     } catch {}
     await new Promise((resolve) => setTimeout(resolve, delayMs));
   }
 
-  throw new Error(`Auth test server did not become healthy at ${baseUrl}/health`);
+  throw new Error(`Auth test server did not become healthy at ${baseUrl}/api/v1/health`);
 }
 
 async function terminateProcess(child: ReturnType<typeof spawn>) {

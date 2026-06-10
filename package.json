@@ -9,7 +9,7 @@
     "worker:identity-outbox": "tsx src/workers/identity-outbox.worker.ts",
     "worker:cleanup": "tsx src/workers/token-cleanup.worker.ts",
     "pii:clean": "tsx src/scripts/pii-clean.ts",
-    "build": "tsc",
+    "build": "pnpm --prefix cima-contracts build && tsc",
     "start": "tsx src/server.ts",
     "preinstall": "pnpm dlx only-allow pnpm",
     "db:generate": "drizzle-kit generate",
@@ -37,7 +37,7 @@
   },
   "homepage": "https://github.com/SebasCarvajal11/crm-auth#readme",
   "dependencies": {
-    "@sebascarvajal11/cima-contracts": "^0.2.0",
+    "@sebascarvajal11/cima-contracts": "workspace:*",
     "@hono/node-server": "^1.19.14",
     "@hono/zod-validator": "^0.8.0",
     "bcrypt": "^6.0.0",
