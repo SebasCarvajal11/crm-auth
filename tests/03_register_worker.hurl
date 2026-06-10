@@ -3,7 +3,7 @@
 # Requiere mod-auth con NODE_ENV=test y EXPOSE_TEMP_PASSWORDS=true
 # ============================================================
 
-POST {{base_url}}/auth/login
+POST {{base_url}}/api/v1/auth/login
 Content-Type: application/json
 {
   "email": "admin@cima.dev",
@@ -13,7 +13,7 @@ HTTP 200
 [Captures]
 admin_token: jsonpath "$.data.access_token"
 
-POST {{base_url}}/auth/register-worker
+POST {{base_url}}/api/v1/auth/register-worker
 Content-Type: application/json
 {
   "email": "worker@cima.dev",
@@ -23,7 +23,7 @@ Content-Type: application/json
 }
 HTTP 401
 
-POST {{base_url}}/auth/register-worker
+POST {{base_url}}/api/v1/auth/register-worker
 Authorization: Bearer {{admin_token}}
 Content-Type: application/json
 {
@@ -43,7 +43,7 @@ jsonpath "$.data.user.last_name" == "Ruiz"
 jsonpath "$.data.user.profession" == "Disenadora"
 jsonpath "$.data.token" isString
 
-POST {{base_url}}/auth/register-worker
+POST {{base_url}}/api/v1/auth/register-worker
 Authorization: Bearer {{admin_token}}
 Content-Type: application/json
 {
@@ -56,7 +56,7 @@ HTTP 409
 [Asserts]
 jsonpath "$.error" exists
 
-POST {{base_url}}/auth/accept-invite
+POST {{base_url}}/api/v1/auth/accept-invite
 Content-Type: application/json
 {
   "token": "{{worker_invite_token}}",
@@ -68,7 +68,7 @@ worker_access_token: jsonpath "$.data.access_token"
 [Asserts]
 jsonpath "$.data.user.role" == "worker"
 
-POST {{base_url}}/auth/login
+POST {{base_url}}/api/v1/auth/login
 Content-Type: application/json
 {
   "email": "worker@cima.dev",

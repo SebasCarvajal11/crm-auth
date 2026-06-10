@@ -8,7 +8,7 @@
 # Ejecutar: hurl --test tests/07_rate_limit.hurl
 # Requisito: KrakenD + mod-auth corriendo (crm-infra/start-local.ps1)
 
-POST {{base_url}}/auth/login
+POST {{base_url}}/api/v1/auth/login
 X-Forwarded-For: {{LOGIN_IP}}
 X-Real-IP: {{LOGIN_IP}}
 Content-Type: application/json
@@ -18,7 +18,7 @@ Content-Type: application/json
 }
 HTTP 401
 
-POST {{base_url}}/auth/login
+POST {{base_url}}/api/v1/auth/login
 X-Forwarded-For: {{LOGIN_IP}}
 X-Real-IP: {{LOGIN_IP}}
 Content-Type: application/json
@@ -28,7 +28,7 @@ Content-Type: application/json
 }
 HTTP 401
 
-POST {{base_url}}/auth/login
+POST {{base_url}}/api/v1/auth/login
 X-Forwarded-For: {{LOGIN_IP}}
 X-Real-IP: {{LOGIN_IP}}
 Content-Type: application/json
@@ -38,7 +38,7 @@ Content-Type: application/json
 }
 HTTP 401
 
-POST {{base_url}}/auth/login
+POST {{base_url}}/api/v1/auth/login
 X-Forwarded-For: {{LOGIN_IP}}
 X-Real-IP: {{LOGIN_IP}}
 Content-Type: application/json
@@ -48,7 +48,7 @@ Content-Type: application/json
 }
 HTTP 401
 
-POST {{base_url}}/auth/login
+POST {{base_url}}/api/v1/auth/login
 X-Forwarded-For: {{LOGIN_IP}}
 X-Real-IP: {{LOGIN_IP}}
 Content-Type: application/json
@@ -59,7 +59,7 @@ Content-Type: application/json
 HTTP 401
 
 # 6to intento → debe ser bloqueado por KrakenD rate limiter (429)
-POST {{base_url}}/auth/login
+POST {{base_url}}/api/v1/auth/login
 X-Forwarded-For: {{LOGIN_IP}}
 X-Real-IP: {{LOGIN_IP}}
 Content-Type: application/json
