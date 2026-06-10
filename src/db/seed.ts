@@ -50,6 +50,7 @@ async function seed() {
   const adminPasswordHash = await hash(ADMIN_PASSWORD, 12);
   const defaultPasswordHash = await hash(DEFAULT_PASSWORD, 12);
   const createdUsers: Array<{ email: string; subject: string; role: string }> = [];
+  const failedUsers: Array<{ email: string; error: unknown }> = [];
 
   for (const user of USERS_TO_SEED) {
     const passwordHash = user.email === "admin@cima.dev" ? adminPasswordHash : defaultPasswordHash;
@@ -77,7 +78,15 @@ async function seed() {
       }
     } catch (error) {
       console.error(`Error creando ${user.email}:`, error);
+      failedUsers.push({ email: user.email, error });
     }
+  }
+
+  if (failedUsers.length > 0 || createdUsers.length !== USERS_TO_SEED.length) {
+    console.error(
+      `\nSeed incompleto: ${createdUsers.length}/${USERS_TO_SEED.length} usuarios creados/actualizados, ${failedUsers.length} errores.`
+    );
+    process.exit(1);
   }
 
   console.log("\nResumen:");
