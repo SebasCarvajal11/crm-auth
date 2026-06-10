@@ -47,7 +47,7 @@ Content-Type: application/json
 }
 HTTP 403
 [Asserts]
-jsonpath "$.error" exists
+jsonpath "$.message" exists
 
 POST {{base_url}}/api/v1/auth/register-worker
 Authorization: Bearer {{worker_token}}

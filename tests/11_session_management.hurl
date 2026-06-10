@@ -75,7 +75,7 @@ POST {{base_url}}/api/v1/auth/refresh
 refresh_token: {{session_rt_1}}
 HTTP 401
 [Asserts]
-jsonpath "$.error" exists
+jsonpath "$.message" exists
 
 # --- Deteccion de robo: rt_2 tambien fue revocado ---
 POST {{base_url}}/api/v1/auth/refresh
@@ -83,7 +83,7 @@ POST {{base_url}}/api/v1/auth/refresh
 refresh_token: {{session_rt_2}}
 HTTP 401
 [Asserts]
-jsonpath "$.error" exists
+jsonpath "$.message" exists
 
 # --- Login nuevo para verificar que las sesiones anteriores no afectan ---
 POST {{base_url}}/api/v1/auth/login

@@ -11,7 +11,7 @@ Content-Type: application/json
 }
 HTTP 401
 [Asserts]
-jsonpath "$.error" exists
+jsonpath "$.message" exists
 
 # --- Contraseña sin formato mínimo (422 Zod) ---
 POST {{base_url}}/api/v1/auth/login
@@ -22,7 +22,7 @@ Content-Type: application/json
 }
 HTTP 400
 [Asserts]
-jsonpath "$.error" exists
+jsonpath "$.message" exists
 
 # --- Login exitoso ---
 POST {{base_url}}/api/v1/auth/login

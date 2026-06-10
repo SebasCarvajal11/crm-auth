@@ -54,7 +54,7 @@ Content-Type: application/json
 }
 HTTP 409
 [Asserts]
-jsonpath "$.error" exists
+jsonpath "$.message" exists
 
 POST {{base_url}}/api/v1/auth/accept-invite
 Content-Type: application/json

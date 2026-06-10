@@ -36,7 +36,7 @@ Content-Type: application/json
 }
 HTTP 400
 [Asserts]
-jsonpath "$.error" exists
+jsonpath "$.message" exists
 
 # --- Verifica email con token valido ---
 POST {{base_url}}/api/v1/auth/verify-email

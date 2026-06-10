@@ -61,7 +61,7 @@ jsonpath "$.message" matches "^Sesi.n cerrada correctamente$"
 POST {{base_url}}/api/v1/auth/refresh
 HTTP 401
 [Asserts]
-jsonpath "$.error" exists
+jsonpath "$.message" exists
 
 # Deteccion de robo: rt_1 fue revocado en la primera rotacion.
 # El store esta vacio -> se envia solo rt_1 -> servidor detecta reuso -> 401
@@ -70,4 +70,4 @@ POST {{base_url}}/api/v1/auth/refresh
 refresh_token: {{rt_1}}
 HTTP 401
 [Asserts]
-jsonpath "$.error" exists
+jsonpath "$.message" exists
