@@ -1,7 +1,7 @@
 import { Hono } from "hono";
-import { zValidator } from "@hono/zod-validator";
 import { type AuthServices } from "./auth.service";
 import { createAuthController } from "./auth.controller";
+import { jsonValidator, paramValidator } from "./validated-json";
 import {
   LoginRequestSchema,
   InviteClientRequestSchema,
@@ -37,7 +37,7 @@ export const createAuthRoutes = (services: AuthServices) => {
   authRoutes.post(
     "/login",
     ipRateLimit({ maxAttempts: env.RATE_LIMIT_LOGIN_MAX, windowMs: env.RATE_LIMIT_LOGIN_WINDOW_MS }),
-    zValidator("json", LoginRequestSchema),
+    jsonValidator(LoginRequestSchema),
     authController.login
   );
 
@@ -48,7 +48,7 @@ export const createAuthRoutes = (services: AuthServices) => {
   authRoutes.post(
     "/change-password",
     authMiddleware,
-    zValidator("json", ChangePasswordSchema),
+    jsonValidator(ChangePasswordSchema),
     authController.changePassword
   );
 
@@ -57,7 +57,7 @@ export const createAuthRoutes = (services: AuthServices) => {
   authRoutes.delete(
     "/sessions/:familyId",
     authMiddleware,
-    zValidator("param", RefreshFamilyParamSchema),
+    paramValidator(RefreshFamilyParamSchema),
     authController.revokeSession
   );
 
@@ -70,7 +70,7 @@ export const createAuthRoutes = (services: AuthServices) => {
   authRoutes.post(
     "/verify-email",
     ipRateLimit({ maxAttempts: env.RATE_LIMIT_VERIFY_EMAIL_MAX, windowMs: env.RATE_LIMIT_VERIFY_EMAIL_WINDOW_MS }),
-    zValidator("json", VerifyEmailSchema),
+    jsonValidator(VerifyEmailSchema),
     authController.verifyEmail
   );
 
@@ -82,7 +82,7 @@ export const createAuthRoutes = (services: AuthServices) => {
     "/register-worker",
     authMiddleware,
     requireRole("admin"),
-    zValidator("json", RegisterWorkerSchema),
+    jsonValidator(RegisterWorkerSchema),
     authController.registerWorker
   );
 
@@ -90,7 +90,7 @@ export const createAuthRoutes = (services: AuthServices) => {
     "/invite-admin",
     authMiddleware,
     requireRole("admin"),
-    zValidator("json", InviteAdminSchema),
+    jsonValidator(InviteAdminSchema),
     authController.inviteAdmin
   );
 
@@ -102,7 +102,7 @@ export const createAuthRoutes = (services: AuthServices) => {
     "/invite-client",
     authMiddleware,
     requireRole("admin"),
-    zValidator("json", InviteClientRequestSchema),
+    jsonValidator(InviteClientRequestSchema),
     authController.inviteClient
   );
 
@@ -110,7 +110,7 @@ export const createAuthRoutes = (services: AuthServices) => {
 
   authRoutes.post(
     "/accept-invite",
-    zValidator("json", AcceptInviteRequestSchema),
+    jsonValidator(AcceptInviteRequestSchema),
     authController.acceptInvite
   );
 
@@ -121,13 +121,13 @@ export const createAuthRoutes = (services: AuthServices) => {
   authRoutes.post(
     "/forgot-password",
     ipRateLimit({ maxAttempts: env.RATE_LIMIT_FORGOT_PASSWORD_MAX, windowMs: env.RATE_LIMIT_FORGOT_PASSWORD_WINDOW_MS }),
-    zValidator("json", ForgotPasswordSchema),
+    jsonValidator(ForgotPasswordSchema),
     authController.forgotPassword
   );
 
   authRoutes.post(
     "/reset-password",
-    zValidator("json", ResetPasswordSchema),
+    jsonValidator(ResetPasswordSchema),
     authController.resetPassword
   );
 
