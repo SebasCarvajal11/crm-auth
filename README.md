@@ -78,3 +78,9 @@ Cobertura mínima: validadores, flujos de login/refresh/logout, contrato HTTP po
 
 - OpenAPI: [`openapi/openapi.yaml`](./openapi/openapi.yaml)
 - Gateway manifest: [`gateway/gateway.manifest.json`](./gateway/gateway.manifest.json)
+
+## Integración y despliegue seguro
+
+`crm-auth` publica identidad mediante el outbox y Redis Streams; `crm-collab` y `crm-media` consumen esos eventos y el JWKS. Cambios de identidad deben conservar ambos contratos durante una migración expand/contract.
+
+La suite `pnpm test` crea identidades bajo el dominio reservado `hurl.test`; no borra ni modifica las cuentas de desarrollo. Para validar el borde público, usar además `pnpm test:contract` con el stack de `crm-infra` levantado.

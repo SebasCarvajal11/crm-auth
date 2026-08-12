@@ -114,3 +114,9 @@ To ensure zero-downtime deployments where old and new versions of a service run 
 | HTTP Identity Hydration (`/bootstrap-identities`) | 2026-05-01 | Reemplazado por replay-request stream |
 | `GATEWAY_TRUST_SECRET` / `gatewayTrustMiddleware` | 2026-05-15 | Eliminado; validación JWKS directa |
 | `crm-bff` como downstream | 2026-06-01 | `crm-bff` fue eliminado del stack |
+
+## Integration Change Gate
+
+- Public API changes require matching OpenAPI, gateway manifest, Hurl coverage, and an expand/contract plan for consumers.
+- Test identities must remain in the reserved `hurl.test` domain. Test setup must never delete or mutate shared development identities.
+- Identity events are emitted through the outbox; request handlers must not rely on synchronous downstream delivery.
