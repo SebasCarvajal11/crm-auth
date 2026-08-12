@@ -66,7 +66,13 @@ async function seed() {
         })
         .onConflictDoUpdate({
           target: users.email,
-          set: { passwordHash, role: user.role },
+          set: {
+            passwordHash,
+            role: user.role,
+            failedLoginAttempts: 0,
+            lockedUntil: null,
+            forcePasswordChange: false,
+          },
         })
         .returning({ email: users.email, subject: users.subject, role: users.role });
 
