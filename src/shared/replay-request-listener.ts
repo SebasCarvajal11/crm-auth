@@ -1,4 +1,4 @@
-import { getRedisConnection, getRedisSubscriber } from "./redis";
+import { createRedisStreamConsumerConnection, getRedisConnection } from "./redis";
 import { env } from "../config/env";
 import { getLogger } from "./logger";
 import { createUsersRepository } from "../modules/users/users.repository";
@@ -8,9 +8,10 @@ const logger = getLogger();
 
 let running = false;
 let readLoopPromise: Promise<void> | null = null;
+let listenerRedis: NonNullable<ReturnType<typeof createRedisStreamConsumerConnection>> | undefined;
 
 export async function startReplayRequestListener(): Promise<void> {
-  const redis = getRedisSubscriber();
+  const redis = createRedisStreamConsumerConnection();
   const conn = getRedisConnection();
   if (!redis || !conn) {
     logger.info(
@@ -18,6 +19,8 @@ export async function startReplayRequestListener(): Promise<void> {
     );
     return;
   }
+
+  listenerRedis = redis;
 
   const streamKey = env.AUTH_REQUESTS_STREAM_KEY;
   const groupName = env.AUTH_REQUESTS_CONSUMER_GROUP;
@@ -48,6 +51,9 @@ export async function stopReplayRequestListener(): Promise<void> {
       new Promise<void>((resolve) => setTimeout(resolve, 3000)),
     ]);
   }
+  await listenerRedis?.quit().catch(() => undefined);
+  listenerRedis = undefined;
+  readLoopPromise = null;
 }
 
 async function readLoop(redis: any, streamKey: string, groupName: string): Promise<void> {
