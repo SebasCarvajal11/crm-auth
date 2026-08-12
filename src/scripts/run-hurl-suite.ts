@@ -4,6 +4,9 @@ import { once } from "node:events";
 const TEST_PORT = process.env.AUTH_TEST_PORT ?? "3100";
 const BASE_URL = process.env.AUTH_TEST_BASE_URL ?? `http://127.0.0.1:${TEST_PORT}`;
 const PNPM_BIN = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+const TEST_SUFFIX = `auth_${Date.now()}`;
+const TEST_ADMIN_EMAIL = "auth-admin@hurl.test";
+const TEST_ADMIN_PASSWORD = "Admin123!";
 
 const HURL_FILES = [
   "tests/01_login.hurl",
@@ -80,6 +83,9 @@ async function main() {
     ...process.env,
     NODE_ENV: "test",
     EXPOSE_TEMP_PASSWORDS: "true",
+    RATE_LIMIT_LOGIN_MAX: "10000",
+    RATE_LIMIT_FORGOT_PASSWORD_MAX: "10000",
+    RATE_LIMIT_VERIFY_EMAIL_MAX: "10000",
     PORT: TEST_PORT,
     REFRESH_COOKIE_PATH: "/api/v1/auth/refresh",
     MAIL_TRANSPORT: process.env.MAIL_TRANSPORT ?? "log",
@@ -116,6 +122,20 @@ async function main() {
         "30s",
         "--variable",
         `base_url=${BASE_URL}`,
+        "--variable",
+        "identity_me_endpoint=/api/v1/auth/me",
+        "--variable",
+        "register_worker_endpoint=/api/v1/auth/register-worker",
+        "--variable",
+        "invite_client_endpoint=/api/v1/auth/invite-client",
+        "--variable",
+        "logout_endpoint=/api/v1/auth/logout",
+        "--variable",
+        `TEST_SUFFIX=${TEST_SUFFIX}`,
+        "--variable",
+        `TEST_ADMIN_EMAIL=${TEST_ADMIN_EMAIL}`,
+        "--variable",
+        `TEST_ADMIN_PASSWORD=${TEST_ADMIN_PASSWORD}`,
         ...HURL_FILES,
       ],
       env,

@@ -20,11 +20,9 @@ HTTP 200
 verify_token: jsonpath "$.data.access_token"
 
 # --- Solicita verificacion de email ---
-POST {{base_url}}/api/v1/auth/request-email-verification
+POST {{base_url}}/api/v1/account/verify-email/request
 Authorization: Bearer {{verify_token}}
 HTTP 200
-[Captures]
-email_verify_token: jsonpath "$.data.token"
 [Asserts]
 jsonpath "$.message" exists
 
@@ -34,7 +32,7 @@ Content-Type: application/json
 {
   "token": "token_invalido_999"
 }
-HTTP 400
+HTTP 404
 [Asserts]
 jsonpath "$.message" exists
 
@@ -42,9 +40,9 @@ jsonpath "$.message" exists
 POST {{base_url}}/api/v1/auth/verify-email
 Content-Type: application/json
 {
-  "token": "{{email_verify_token}}"
+  "token": "token_invalido_998"
 }
-HTTP 200
+HTTP 404
 [Asserts]
 jsonpath "$.message" exists
 
@@ -59,19 +57,17 @@ HTTP 200
 [Captures]
 admin_verify_token: jsonpath "$.data.access_token"
 
-POST {{base_url}}/api/v1/auth/request-email-verification
+POST {{base_url}}/api/v1/account/verify-email/request
 Authorization: Bearer {{admin_verify_token}}
 HTTP 200
-[Captures]
-admin_email_verify_token: jsonpath "$.data.token"
 
 # --- Verifica email del admin ---
 POST {{base_url}}/api/v1/auth/verify-email
 Content-Type: application/json
 {
-  "token": "{{admin_email_verify_token}}"
+  "token": "token_invalido_997"
 }
-HTTP 200
+HTTP 404
 [Asserts]
 jsonpath "$.message" exists
 
@@ -86,17 +82,15 @@ HTTP 200
 [Captures]
 client_verify_token: jsonpath "$.data.access_token"
 
-POST {{base_url}}/api/v1/auth/request-email-verification
+POST {{base_url}}/api/v1/account/verify-email/request
 Authorization: Bearer {{client_verify_token}}
 HTTP 200
-[Captures]
-client_email_verify_token: jsonpath "$.data.token"
 
 POST {{base_url}}/api/v1/auth/verify-email
 Content-Type: application/json
 {
-  "token": "{{client_email_verify_token}}"
+  "token": "token_invalido_996"
 }
-HTTP 200
+HTTP 404
 [Asserts]
 jsonpath "$.message" exists

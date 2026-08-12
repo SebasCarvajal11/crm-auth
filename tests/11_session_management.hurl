@@ -22,11 +22,11 @@ session_token: jsonpath "$.data.access_token"
 session_rt_1: cookie "refresh_token"
 
 # --- Listar sesiones activas ---
-GET {{base_url}}/api/v1/auth/sessions
+GET {{base_url}}/api/v1/account/sessions
 Authorization: Bearer {{session_token}}
 HTTP 200
 [Asserts]
-jsonpath "$.data" isCollection
+jsonpath "$.data.sessions" isCollection
 
 # --- Refresh con familia valida: rt_1 -> rt_2 ---
 POST {{base_url}}/api/v1/auth/refresh

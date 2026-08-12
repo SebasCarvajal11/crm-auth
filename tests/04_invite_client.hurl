@@ -5,18 +5,18 @@
 POST {{base_url}}/api/v1/auth/login
 Content-Type: application/json
 {
-  "email": "admin@cima.dev",
-  "password": "Admin123!"
+  "email": "{{TEST_ADMIN_EMAIL}}",
+  "password": "{{TEST_ADMIN_PASSWORD}}"
 }
 HTTP 200
 [Captures]
 admin_token: jsonpath "$.data.access_token"
 
-POST {{base_url}}/api/v1/auth/invite-client
+POST {{base_url}}{{invite_client_endpoint}}
 Authorization: Bearer {{admin_token}}
 Content-Type: application/json
 {
-  "email": "cliente@cima.dev",
+  "email": "cliente.{{TEST_SUFFIX}}@hurl.test",
   "first_name": "Carlos",
   "last_name": "Lopez",
   "client_kind": "juridical",
@@ -31,7 +31,7 @@ jsonpath "$.message" == "Invitacion creada"
 GET {{base_url}}/api/v1/auth/accept-invite/{{invite_token}}
 HTTP 200
 [Asserts]
-jsonpath "$.data.email" == "cliente@cima.dev"
+jsonpath "$.data.email" == "cliente.{{TEST_SUFFIX}}@hurl.test"
 jsonpath "$.data.first_name" == "Carlos"
 jsonpath "$.data.last_name" == "Lopez"
 jsonpath "$.data.client_kind" == "juridical"
@@ -59,12 +59,12 @@ Content-Type: application/json
 }
 HTTP 409
 
-GET {{base_url}}/api/v1/auth/me
+GET {{base_url}}{{identity_me_endpoint}}
 Authorization: Bearer {{client_access_token}}
 HTTP 200
 [Asserts]
 jsonpath "$.data.role" == "client"
-jsonpath "$.data.email" == "cliente@cima.dev"
+jsonpath "$.data.email" == "cliente.{{TEST_SUFFIX}}@hurl.test"
 jsonpath "$.data.first_name" == "Carlos"
 jsonpath "$.data.last_name" == "Lopez"
 jsonpath "$.data.client_kind" == "juridical"

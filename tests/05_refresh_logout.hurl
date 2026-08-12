@@ -11,8 +11,8 @@
 POST {{base_url}}/api/v1/auth/login
 Content-Type: application/json
 {
-  "email": "admin@cima.dev",
-  "password": "Admin123!"
+  "email": "{{TEST_ADMIN_EMAIL}}",
+  "password": "{{TEST_ADMIN_PASSWORD}}"
 }
 HTTP 200
 [Captures]
@@ -42,14 +42,14 @@ rt_3: cookie "refresh_token"
 jsonpath "$.data.access_token" isString
 
 # El access token v3 sirve para autenticarse
-GET {{base_url}}/api/v1/auth/me
+GET {{base_url}}{{identity_me_endpoint}}
 Authorization: Bearer {{access_token_v3}}
 HTTP 200
 [Asserts]
-jsonpath "$.data.email" == "admin@cima.dev"
+jsonpath "$.data.email" == "{{TEST_ADMIN_EMAIL}}"
 
 # Logout: revoca rt_3 y vacia el cookie store
-POST {{base_url}}/api/v1/auth/logout
+POST {{base_url}}{{logout_endpoint}}
 Authorization: Bearer {{access_token_v3}}
 [Cookies]
 refresh_token: {{rt_3}}

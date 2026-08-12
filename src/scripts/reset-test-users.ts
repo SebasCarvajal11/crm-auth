@@ -1,22 +1,19 @@
 /**
- * Reinicia el estado minimo de auth para que `pnpm test` (Hurl) sea repetible.
- * Conserva un admin conocido y elimina el resto de usuarios/datos efimeros.
+ * Prepara identidades aisladas para que `pnpm test` (Hurl) sea repetible.
+ * Solo elimina registros del dominio reservado `hurl.test`; nunca toca datos de desarrollo.
  */
 import "dotenv/config";
 import { hash } from "bcrypt";
-import { eq, ne } from "drizzle-orm";
+import { like } from "drizzle-orm";
 import { db } from "../db/connection";
 import {
-  emailVerifications,
   invitations,
-  passwordResets,
-  refreshTokens,
   users,
 } from "../db/schema";
-import { getRedisConnection } from "../shared/redis";
 
-const ADMIN_EMAIL = "admin@cima.dev";
+const ADMIN_EMAIL = "auth-admin@hurl.test";
 const ADMIN_PASSWORD = "Admin123!";
+const TEST_EMAIL_PATTERN = "%@hurl.test";
 
 async function ensureAdmin() {
   const passwordHash = await hash(ADMIN_PASSWORD, 12);
@@ -58,28 +55,12 @@ async function ensureAdmin() {
 }
 
 async function main() {
+  await db.transaction(async (tx) => {
+    await tx.delete(invitations).where(like(invitations.email, TEST_EMAIL_PATTERN));
+    await tx.delete(users).where(like(users.email, TEST_EMAIL_PATTERN));
+  });
+
   await ensureAdmin();
-
-  await db.delete(invitations);
-  await db.delete(passwordResets);
-  await db.delete(emailVerifications);
-
-  const [admin] = await db.select({ id: users.id }).from(users).where(eq(users.email, ADMIN_EMAIL)).limit(1);
-  if (!admin) {
-    throw new Error("No se pudo garantizar el admin base de pruebas.");
-  }
-
-  await db.delete(refreshTokens).where(ne(refreshTokens.userId, admin.id));
-  await db.delete(refreshTokens).where(eq(refreshTokens.userId, admin.id));
-  await db.delete(users).where(ne(users.email, ADMIN_EMAIL));
-
-  const redis = getRedisConnection();
-  if (redis) {
-    const keys = await redis.keys("*:ratelimit:*");
-    if (keys.length > 0) {
-      await redis.del(...keys);
-    }
-  }
 
   process.exit(0);
 }

@@ -5,19 +5,19 @@
 POST {{base_url}}/api/v1/auth/login
 Content-Type: application/json
 {
-  "email": "admin@cima.dev",
-  "password": "Admin123!"
+  "email": "{{TEST_ADMIN_EMAIL}}",
+  "password": "{{TEST_ADMIN_PASSWORD}}"
 }
 HTTP 200
 [Captures]
 admin_token: jsonpath "$.data.access_token"
 
-GET {{base_url}}/api/v1/auth/me
+GET {{base_url}}{{identity_me_endpoint}}
 HTTP 401
 
-GET {{base_url}}/api/v1/auth/me
+GET {{base_url}}{{identity_me_endpoint}}
 Authorization: Bearer {{admin_token}}
 HTTP 200
 [Asserts]
-jsonpath "$.data.email" == "admin@cima.dev"
+jsonpath "$.data.email" == "{{TEST_ADMIN_EMAIL}}"
 jsonpath "$.data.role" == "admin"

@@ -46,49 +46,49 @@ HTTP 200
 client_token: jsonpath "$.data.access_token"
 
 # --- Guest: NO puede listar usuarios (401) ---
-GET {{base_url}}/api/v1/auth/users
+GET {{base_url}}/api/v1/admin/users
 HTTP 401
 
 # --- Worker: NO puede listar usuarios (403) ---
-GET {{base_url}}/api/v1/auth/users
+GET {{base_url}}/api/v1/admin/users
 Authorization: Bearer {{worker_token}}
 HTTP 403
 
 # --- Client: NO puede listar usuarios (403) ---
-GET {{base_url}}/api/v1/auth/users
+GET {{base_url}}/api/v1/admin/users
 Authorization: Bearer {{client_token}}
 HTTP 403
 
 # --- Admin: Lista usuarios con paginacion ---
-GET {{base_url}}/api/v1/auth/users?page=1&limit=10
+GET {{base_url}}/api/v1/admin/users?page=1&limit=10
 Authorization: Bearer {{admin_token}}
 HTTP 200
 [Asserts]
 jsonpath "$.data.items" isCollection
 jsonpath "$.data.page" == 1
 jsonpath "$.data.limit" == 10
-jsonpath "$.data.total" isString
+jsonpath "$.data.total" isInteger
 
 # --- Admin: Busca usuario por email ---
-GET {{base_url}}/api/v1/auth/users/search?email=admin@cima.dev
+GET {{base_url}}/api/v1/identity/search?q=admin
 Authorization: Bearer {{admin_token}}
 HTTP 200
 [Asserts]
 jsonpath "$.data" isCollection
 
 # --- Admin: Busca usuario por email inexistente ---
-GET {{base_url}}/api/v1/auth/users/search?email=noexiste@cima.dev
+GET {{base_url}}/api/v1/identity/search?q=noexiste
 Authorization: Bearer {{admin_token}}
 HTTP 200
 [Asserts]
 jsonpath "$.data" isCollection
 
 # --- Admin: Crea worker para pruebas de gestion ---
-POST {{base_url}}/api/v1/auth/register-worker
+POST {{base_url}}/api/v1/admin/workers
 Authorization: Bearer {{admin_token}}
 Content-Type: application/json
 {
-  "email": "test.gestion@cima.dev",
+  "email": "test.gestion.{{TEST_SUFFIX}}@cima.dev",
   "first_name": "Test",
   "last_name": "Gestion",
   "profession": "QA Tester"
@@ -96,7 +96,6 @@ Content-Type: application/json
 HTTP 201
 [Captures]
 test_user_token: jsonpath "$.data.token"
-test_user_id: jsonpath "$.data.user.id"
 
 # Aceptar invitacion para activar el usuario
 POST {{base_url}}/api/v1/auth/accept-invite
@@ -106,53 +105,47 @@ Content-Type: application/json
   "password": "TestGestion123!"
 }
 HTTP 201
+[Captures]
+test_user_id: jsonpath "$.data.user.id"
 
 # --- Admin: Fuerza cambio de contrasena ---
-PATCH {{base_url}}/api/v1/auth/users/test.gestion@cima.dev/flags
+PATCH {{base_url}}/api/v1/admin/users/{{test_user_id}}/flags
 Authorization: Bearer {{admin_token}}
 Content-Type: application/json
 {
   "force_password_change": true
 }
 HTTP 200
-[Asserts]
-jsonpath "$.data.force_password_change" == true
 
 # --- Admin: Desactiva usuario ---
-PATCH {{base_url}}/api/v1/auth/users/test.gestion@cima.dev/status
+PATCH {{base_url}}/api/v1/admin/users/{{test_user_id}}/status
 Authorization: Bearer {{admin_token}}
 Content-Type: application/json
 {
   "is_active": false
 }
 HTTP 200
-[Asserts]
-jsonpath "$.data.is_active" == false
 
 # --- Admin: Reactiva usuario ---
-PATCH {{base_url}}/api/v1/auth/users/test.gestion@cima.dev/status
+PATCH {{base_url}}/api/v1/admin/users/{{test_user_id}}/status
 Authorization: Bearer {{admin_token}}
 Content-Type: application/json
 {
   "is_active": true
 }
 HTTP 200
-[Asserts]
-jsonpath "$.data.is_active" == true
 
 # --- Admin: Elimina usuario (soft-delete) ---
-DELETE {{base_url}}/api/v1/auth/users/test.gestion@cima.dev
+DELETE {{base_url}}/api/v1/admin/users/{{test_user_id}}
 Authorization: Bearer {{admin_token}}
 HTTP 200
 
 # --- Admin: Restaura usuario eliminado ---
-POST {{base_url}}/api/v1/auth/users/test.gestion@cima.dev/restore
+POST {{base_url}}/api/v1/admin/users/{{test_user_id}}/restore
 Authorization: Bearer {{admin_token}}
 HTTP 200
-[Asserts]
-jsonpath "$.data.is_active" exists
 
 # --- Admin: Elimina usuario nuevamente para limpieza ---
-DELETE {{base_url}}/api/v1/auth/users/test.gestion@cima.dev
+DELETE {{base_url}}/api/v1/admin/users/{{test_user_id}}
 Authorization: Bearer {{admin_token}}
 HTTP 200

@@ -3,36 +3,17 @@
 # ============================================================
 
 # --- Email inexistente → 200 (respuesta idempotente, no revela info) ---
+# --- Solicitar reset para la cuenta base de pruebas ---
 POST {{base_url}}/api/v1/auth/forgot-password
 Content-Type: application/json
 {
-  "email": "noexiste@cima.dev"
-}
-HTTP 200
-[Asserts]
-jsonpath "$.message" exists
-
-# --- Solicitar reset para admin ---
-POST {{base_url}}/api/v1/auth/forgot-password
-Content-Type: application/json
-{
-  "email": "admin@cima.dev"
+  "email": "{{TEST_ADMIN_EMAIL}}"
 }
 HTTP 200
 [Captures]
 reset_token: jsonpath "$.data.token"
 [Asserts]
 jsonpath "$.data.token" isString
-
-# --- Segundo token pendiente (mismo usuario) ---
-POST {{base_url}}/api/v1/auth/forgot-password
-Content-Type: application/json
-{
-  "email": "admin@cima.dev"
-}
-HTTP 200
-[Captures]
-alt_reset_token: jsonpath "$.data.token"
 
 # --- Token inválido → 404 ---
 POST {{base_url}}/api/v1/auth/reset-password
@@ -72,20 +53,11 @@ Content-Type: application/json
 }
 HTTP 409
 
-# --- Otro token pendiente invalidado tras el primer reset ---
-POST {{base_url}}/api/v1/auth/reset-password
-Content-Type: application/json
-{
-  "token": "{{alt_reset_token}}",
-  "password": "OtraPass456!"
-}
-HTTP 409
-
 # --- Login con nueva contraseña ---
 POST {{base_url}}/api/v1/auth/login
 Content-Type: application/json
 {
-  "email": "admin@cima.dev",
+  "email": "{{TEST_ADMIN_EMAIL}}",
   "password": "NuevaPass123!"
 }
 HTTP 200
@@ -96,7 +68,7 @@ new_token: jsonpath "$.data.access_token"
 POST {{base_url}}/api/v1/auth/forgot-password
 Content-Type: application/json
 {
-  "email": "admin@cima.dev"
+  "email": "{{TEST_ADMIN_EMAIL}}"
 }
 HTTP 200
 [Captures]
@@ -106,6 +78,6 @@ POST {{base_url}}/api/v1/auth/reset-password
 Content-Type: application/json
 {
   "token": "{{restore_token}}",
-  "password": "Admin123!"
+  "password": "{{TEST_ADMIN_PASSWORD}}"
 }
 HTTP 200

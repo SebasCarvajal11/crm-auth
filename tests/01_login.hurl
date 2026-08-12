@@ -17,7 +17,7 @@ jsonpath "$.message" exists
 POST {{base_url}}/api/v1/auth/login
 Content-Type: application/json
 {
-  "email": "admin@cima.dev",
+  "email": "{{TEST_ADMIN_EMAIL}}",
   "password": "corta"
 }
 HTTP 400
@@ -28,8 +28,8 @@ jsonpath "$.message" exists
 POST {{base_url}}/api/v1/auth/login
 Content-Type: application/json
 {
-  "email": "admin@cima.dev",
-  "password": "Admin123!"
+  "email": "{{TEST_ADMIN_EMAIL}}",
+  "password": "{{TEST_ADMIN_PASSWORD}}"
 }
 HTTP 200
 [Captures]

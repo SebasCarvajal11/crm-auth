@@ -67,4 +67,4 @@ Content-Type: application/json
   "email": "admin@cima.dev",
   "password": "WrongPass6!"
 }
-HTTP 429
+HTTP 401

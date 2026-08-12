@@ -6,18 +6,18 @@
 POST {{base_url}}/api/v1/auth/login
 Content-Type: application/json
 {
-  "email": "admin@cima.dev",
-  "password": "Admin123!"
+  "email": "{{TEST_ADMIN_EMAIL}}",
+  "password": "{{TEST_ADMIN_PASSWORD}}"
 }
 HTTP 200
 [Captures]
 admin_token_rbac: jsonpath "$.data.access_token"
 
-POST {{base_url}}/api/v1/auth/register-worker
+POST {{base_url}}{{register_worker_endpoint}}
 Authorization: Bearer {{admin_token_rbac}}
 Content-Type: application/json
 {
-  "email": "worker.rbac@cima.dev",
+  "email": "worker.rbac.{{TEST_SUFFIX}}@hurl.test",
   "first_name": "Laura",
   "last_name": "Gomez",
   "profession": "QA"
@@ -36,11 +36,11 @@ HTTP 201
 [Captures]
 worker_token: jsonpath "$.data.access_token"
 
-POST {{base_url}}/api/v1/auth/invite-client
+POST {{base_url}}{{invite_client_endpoint}}
 Authorization: Bearer {{worker_token}}
 Content-Type: application/json
 {
-  "email": "otro@cima.dev",
+  "email": "otro.{{TEST_SUFFIX}}@hurl.test",
   "first_name": "Mario",
   "last_name": "Perez",
   "client_kind": "natural"
@@ -49,18 +49,18 @@ HTTP 403
 [Asserts]
 jsonpath "$.message" exists
 
-POST {{base_url}}/api/v1/auth/register-worker
+POST {{base_url}}{{register_worker_endpoint}}
 Authorization: Bearer {{worker_token}}
 Content-Type: application/json
 {
-  "email": "otro_worker@cima.dev",
+  "email": "otro-worker.{{TEST_SUFFIX}}@hurl.test",
   "first_name": "Nora",
   "last_name": "Suarez",
   "profession": "DevOps"
 }
 HTTP 403
 
-GET {{base_url}}/api/v1/auth/me
+GET {{base_url}}{{identity_me_endpoint}}
 Authorization: Bearer {{worker_token}}
 HTTP 200
 [Asserts]
