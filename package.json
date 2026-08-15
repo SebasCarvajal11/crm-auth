@@ -4,6 +4,7 @@
   "type": "module",
   "packageManager": "pnpm@11.1.1",
   "scripts": {
+    "predev": "pnpm --prefix cima-contracts build",
     "dev": "tsx watch src/server.ts",
     "worker:email": "tsx src/workers/email.worker.ts",
     "worker:identity-outbox": "tsx src/workers/identity-outbox.worker.ts",
