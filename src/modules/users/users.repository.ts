@@ -8,6 +8,7 @@ import { createEmailVerificationsRepository } from "./repository/email-verificat
 import { createAuditLogsRepository } from "./repository/audit-logs.repository";
 import { createTokenCleanupRepository } from "./repository/token-cleanup.repository";
 import { createIdentityOutboxRepository } from "./repository/identity-outbox.repository";
+import { createEmailOutboxRepository } from "./repository/email-outbox.repository";
 
 export type DB = typeof db;
 export type TX = Parameters<Parameters<DB["transaction"]>[0]>[0];
@@ -24,6 +25,7 @@ export const createUsersRepository = (conn: DbOrTx = db) => {
     ...createAuditLogsRepository(conn),
     ...createTokenCleanupRepository(conn),
     ...createIdentityOutboxRepository(conn),
+    ...createEmailOutboxRepository(conn),
   };
 
   return {

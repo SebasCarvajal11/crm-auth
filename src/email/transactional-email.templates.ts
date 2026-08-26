@@ -49,9 +49,6 @@ const infoCard = (title: string, body: string, tone: "warning" | "neutral" = "wa
   return `<div style=\"margin:18px 0 0 0; padding:14px 16px; border-radius:12px; border:1px solid ${brand.border}; background:${bg};\"><p style=\"margin:0 0 7px 0; color:${brand.ink}; font-size:14px; font-weight:700;\">${escapeHtml(title)}</p><p style=\"margin:0; color:${brand.mutedInk}; font-size:14px; line-height:1.55; border-left:3px solid ${border}; padding-left:10px;\">${body}</p></div>`;
 };
 
-const monoCard = (content: string) =>
-  `<div style=\"margin:0 0 18px 0; padding:14px 16px; border-radius:12px; border:1px dashed ${brand.border}; background:#f8fbff; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace; font-size:15px; color:${brand.ink}; word-break:break-word;\">${escapeHtml(content)}</div>`;
-
 const renderShell = (params: {
   preview: string;
   eyebrowText: string;
@@ -149,31 +146,6 @@ const renderClientInvite = (to: string, link: string): RenderedEmail => ({
   }),
 });
 
-const renderWorkerWelcome = (to: string, tempPassword: string): RenderedEmail => ({
-  subject: "Tu cuenta de trabajo - CIMA CRM",
-  text: [
-    "Cuenta de trabajo creada",
-    "",
-    `Correo: ${to}`,
-    `Contrasena temporal: ${tempPassword}`,
-    "",
-    "Inicia sesion y cambiala de inmediato desde tu panel de cuenta.",
-  ].join("\n"),
-  html: renderShell({
-    preview: "Tu cuenta fue creada. Revisa tu acceso temporal.",
-    eyebrowText: "Alta de trabajador",
-    title: "Bienvenido a tu cuenta",
-    intro: "Tu acceso fue creado correctamente. Usa esta contrasena temporal para el primer ingreso.",
-    bodyHtml: `${metricPill("Usuario", to)}${p("<strong>Contrasena temporal:</strong>")}${monoCard(
-      tempPassword
-    )}${infoCard(
-      "Accion recomendada",
-      "Despues de iniciar sesion, cambia tu contrasena para proteger tu cuenta.",
-      "neutral"
-    )}`,
-  }),
-});
-
 const renderVerifyEmail = (link: string): RenderedEmail => ({
   subject: "Verifica tu correo - CIMA CRM",
   text: [
@@ -210,8 +182,6 @@ export const renderTransactionalEmail = (
       const link = `${basePublicUrl}/accept-invite/${encodeURIComponent(job.token)}`;
       return renderClientInvite(job.to, link);
     }
-    case "worker_welcome":
-      return renderWorkerWelcome(job.to, job.tempPassword);
     case "email_verify": {
       const link = `${basePublicUrl}/verify-email?token=${encodeURIComponent(job.token)}`;
       return renderVerifyEmail(link);

@@ -2,6 +2,7 @@ import type { DbOrTx } from "../users.repository";
 import { eq, and, gt } from "drizzle-orm";
 import { invitations } from "../../../db/schema";
 import type { NewInvitation } from "../users.types";
+import { hashActionToken } from "../../auth/action-token";
 
 export const createInvitationsRepository = (conn: DbOrTx) => ({
   createInvitation: async (data: NewInvitation) => {
@@ -10,12 +11,20 @@ export const createInvitationsRepository = (conn: DbOrTx) => ({
   },
 
   findInvitationByToken: async (token: string) => {
+    const tokenHash = hashActionToken(token);
     const [invitation] = await conn
+      .select()
+      .from(invitations)
+      .where(eq(invitations.token, tokenHash))
+      .limit(1);
+    if (invitation) return invitation;
+
+    const [legacyInvitation] = await conn
       .select()
       .from(invitations)
       .where(eq(invitations.token, token))
       .limit(1);
-    return invitation ?? null;
+    return legacyInvitation ?? null;
   },
 
   findPendingInvitationByEmail: async (email: string) => {

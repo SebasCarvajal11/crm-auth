@@ -1,5 +1,4 @@
 import type { UsersRepository } from "../users/users.repository";
-import type { EmailJobPublisher } from "../../email/transactional-email.types";
 import { createLoginSessionService } from "./auth.service.login-session";
 import { createInvitationService } from "./auth.service.invitations";
 import { createWorkerRegistrationService } from "./auth.service.worker";
@@ -29,16 +28,13 @@ export interface AuthServices {
   profileService: ProfileService;
 }
 
-export const createAuthServices = (
-  repo: UsersRepository,
-  mail: EmailJobPublisher
-): AuthServices => ({
+export const createAuthServices = (repo: UsersRepository): AuthServices => ({
   loginSessionService: createLoginSessionService(repo),
-  invitationService: createInvitationService(repo, mail),
-  workerRegistrationService: createWorkerRegistrationService(repo, mail),
-  passwordService: createPasswordService(repo, mail),
+  invitationService: createInvitationService(repo),
+  workerRegistrationService: createWorkerRegistrationService(repo),
+  passwordService: createPasswordService(repo),
   sessionListingService: createSessionListingService(repo),
-  emailVerificationService: createEmailVerificationService(repo, mail),
+  emailVerificationService: createEmailVerificationService(repo),
   adminUserService: createAdminUserService(repo),
   profileService: createProfileService(repo),
 });

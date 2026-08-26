@@ -2,6 +2,7 @@ import type { DbOrTx } from "../users.repository";
 import { and, eq } from "drizzle-orm";
 import { emailVerifications } from "../../../db/schema";
 import type { NewEmailVerification } from "../users.types";
+import { hashActionToken } from "../../auth/action-token";
 
 export const createEmailVerificationsRepository = (conn: DbOrTx) => ({
   createEmailVerification: async (data: NewEmailVerification) => {
@@ -10,12 +11,20 @@ export const createEmailVerificationsRepository = (conn: DbOrTx) => ({
   },
 
   findEmailVerificationByToken: async (token: string) => {
+    const tokenHash = hashActionToken(token);
     const [row] = await conn
+      .select()
+      .from(emailVerifications)
+      .where(eq(emailVerifications.token, tokenHash))
+      .limit(1);
+    if (row) return row;
+
+    const [legacyRow] = await conn
       .select()
       .from(emailVerifications)
       .where(eq(emailVerifications.token, token))
       .limit(1);
-    return row ?? null;
+    return legacyRow ?? null;
   },
 
   markEmailVerificationAsUsed: async (id: string) => {

@@ -16,7 +16,8 @@ async function tick() {
       counts.refreshTokens +
       counts.passwordResets +
       counts.emailVerifications +
-      counts.invitations;
+      counts.invitations +
+      counts.emailOutbox;
     if (total > 0) {
       logger.info({ topic: "worker:cleanup", counts }, "filas eliminadas");
     }

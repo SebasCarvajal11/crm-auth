@@ -82,13 +82,13 @@ async function main() {
   const env = {
     ...process.env,
     NODE_ENV: "test",
-    EXPOSE_TEMP_PASSWORDS: "true",
     RATE_LIMIT_LOGIN_MAX: "10000",
     RATE_LIMIT_FORGOT_PASSWORD_MAX: "10000",
     RATE_LIMIT_VERIFY_EMAIL_MAX: "10000",
     PORT: TEST_PORT,
     REFRESH_COOKIE_PATH: "/api/v1/auth/refresh",
     MAIL_TRANSPORT: process.env.MAIL_TRANSPORT ?? "log",
+    EMAIL_OUTBOX_ENCRYPTION_KEY: process.env.EMAIL_OUTBOX_ENCRYPTION_KEY ?? "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
   };
 
   const server = runCommand(PNPM_BIN, ["start"], env, "pipe");

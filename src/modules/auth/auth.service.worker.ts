@@ -1,26 +1,18 @@
 import { hash } from "bcrypt";
-import { randomBytes } from "crypto";
 import type { WorkerRegistrationRepository } from "./ports/auth-repositories.port";
 import type { RegisterWorkerRequest } from "./auth.schemas";
-import type { EmailJobPublisher } from "../../email/transactional-email.types";
 import { env } from "../../config/env";
 import {
-  BadRequestError,
   ConflictError,
-  UnauthorizedError,
 } from "../../shared/middlewares/error-handler.middleware";
 import { BCRYPT_ROUNDS } from "./auth.constants";
 import { getLogger } from "../../shared/logger";
+import { createActionToken, hashActionToken } from "./action-token";
+import { encryptEmailJob } from "../../email/email-outbox-crypto";
 
 const logger = getLogger();
 
-const mayExposeTempPasswordInResponse = () =>
-  env.NODE_ENV === "test" && env.EXPOSE_TEMP_PASSWORDS;
-
-export const createWorkerRegistrationService = (
-  repo: WorkerRegistrationRepository,
-  mail: EmailJobPublisher
-) => ({
+export const createWorkerRegistrationService = (repo: WorkerRegistrationRepository) => ({
   registerWorker: async (
     data: RegisterWorkerRequest,
     adminUserId: string,
@@ -42,33 +34,19 @@ export const createWorkerRegistrationService = (
       throw new ConflictError("Ya existe una invitación pendiente para este correo");
     }
 
-    const rawToken = randomBytes(32).toString("hex");
+    const rawToken = createActionToken();
 
-    await repo.createInvitation({
-      email: data.email,
-      firstName: data.first_name,
-      lastName: data.last_name,
-      role: "worker",
-      profession: data.profession,
-      token: rawToken,
-      createdBy: adminUserId,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    await repo.transaction(async (tx) => {
+      await tx.createInvitation({
+        email: data.email, firstName: data.first_name, lastName: data.last_name,
+        role: "worker", profession: data.profession, token: hashActionToken(rawToken),
+        createdBy: adminUserId, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      });
+      await tx.createEmailOutboxEvent(encryptEmailJob({ type: "client_invite", to: data.email, token: rawToken }));
+      await tx.createAuditLog(adminUserId, "worker_registered", ip, userAgent, {
+        email: data.email, first_name: data.first_name, last_name: data.last_name, profession: data.profession,
+      });
     });
-
-    await repo.createAuditLog(adminUserId, "worker_registered", ip, userAgent, {
-      email: data.email,
-      first_name: data.first_name,
-      last_name: data.last_name,
-      profession: data.profession,
-    });
-
-    mail
-      .enqueue({
-        type: "client_invite",
-        to: data.email,
-        token: rawToken,
-      })
-      .catch((err) => logger.error({ err, topic: "mail enqueue worker invite" }, "enqueue failed"));
 
     return {
       user: {
@@ -87,21 +65,11 @@ export const createWorkerRegistrationService = (
       email: string;
       first_name: string;
       last_name: string;
-      secret_password: string;
     },
     adminUserId: string,
     ip: string,
     userAgent: string
   ) => {
-    if (!env.ADMIN_INVITE_SECRET) {
-      throw new BadRequestError(
-        "La funcionalidad de invitación de administradores no está configurada"
-      );
-    }
-    if (data.secret_password !== env.ADMIN_INVITE_SECRET) {
-      throw new UnauthorizedError("Contraseña secreta inválida para invitar administradores");
-    }
-
     const existing = await repo.findByEmailIncludingDeleted(data.email);
     if (existing && !existing.deletedAt) {
       throw new ConflictError("Ya existe un usuario con ese correo");
@@ -117,31 +85,19 @@ export const createWorkerRegistrationService = (
       throw new ConflictError("Ya existe una invitación pendiente para este correo");
     }
 
-    const rawToken = randomBytes(32).toString("hex");
+    const rawToken = createActionToken();
 
-    await repo.createInvitation({
-      email: data.email,
-      firstName: data.first_name,
-      lastName: data.last_name,
-      role: "admin",
-      token: rawToken,
-      createdBy: adminUserId,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    await repo.transaction(async (tx) => {
+      await tx.createInvitation({
+        email: data.email, firstName: data.first_name, lastName: data.last_name,
+        role: "admin", token: hashActionToken(rawToken), createdBy: adminUserId,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      });
+      await tx.createEmailOutboxEvent(encryptEmailJob({ type: "client_invite", to: data.email, token: rawToken }));
+      await tx.createAuditLog(adminUserId, "admin_invited", ip, userAgent, {
+        email: data.email, first_name: data.first_name, last_name: data.last_name,
+      });
     });
-
-    await repo.createAuditLog(adminUserId, "admin_invited", ip, userAgent, {
-      email: data.email,
-      first_name: data.first_name,
-      last_name: data.last_name,
-    });
-
-    mail
-      .enqueue({
-        type: "client_invite",
-        to: data.email,
-        token: rawToken,
-      })
-      .catch((err) => logger.error({ err, topic: "mail enqueue admin invite" }, "enqueue failed"));
 
     return {
       user: {

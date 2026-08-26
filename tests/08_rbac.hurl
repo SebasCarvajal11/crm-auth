@@ -1,6 +1,6 @@
 # ============================================================
 # 08 — Control de Acceso por Rol (RBAC)
-# Requiere mod-auth con NODE_ENV=test y EXPOSE_TEMP_PASSWORDS=true
+# Requiere mod-auth con NODE_ENV=test para exponer el token de invitación.
 # ============================================================
 
 POST {{base_url}}/api/v1/auth/login

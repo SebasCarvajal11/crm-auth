@@ -5,6 +5,7 @@ import {
   invitations,
   passwordResets,
   refreshTokens,
+  emailOutbox,
 } from "../../../db/schema";
 
 export type TokenCleanupCounts = {
@@ -12,6 +13,7 @@ export type TokenCleanupCounts = {
   passwordResets: number;
   emailVerifications: number;
   invitations: number;
+  emailOutbox: number;
 };
 
 export const createTokenCleanupRepository = (conn: DbOrTx) => ({
@@ -71,11 +73,17 @@ export const createTokenCleanupRepository = (conn: DbOrTx) => ({
       )
       .returning({ id: invitations.id });
 
+    const removedEmailOutbox = await conn
+      .delete(emailOutbox)
+      .where(and(eq(emailOutbox.status, "published"), lt(emailOutbox.publishedAt, staleBefore)))
+      .returning({ id: emailOutbox.id });
+
     return {
       refreshTokens: removedRefresh.length,
       passwordResets: removedPasswordResets.length,
       emailVerifications: removedEmailVerifications.length,
       invitations: removedInvitations.length,
+      emailOutbox: removedEmailOutbox.length,
     };
   },
 });

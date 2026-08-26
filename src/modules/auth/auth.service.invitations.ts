@@ -1,8 +1,6 @@
 import { hash } from "bcrypt";
-import { randomBytes } from "crypto";
 import type { InvitationRepository } from "./ports/auth-repositories.port";
 import type { InviteClientRequest, AcceptInviteRequest } from "./auth.schemas";
-import type { EmailJobPublisher } from "../../email/transactional-email.types";
 import { env } from "../../config/env";
 import {
   UnauthorizedError,
@@ -12,13 +10,12 @@ import {
 import { BCRYPT_ROUNDS } from "./auth.constants";
 import { issueTokenPair } from "./auth.token-utils";
 import { getLogger } from "../../shared/logger";
+import { createActionToken, hashActionToken } from "./action-token";
+import { encryptEmailJob } from "../../email/email-outbox-crypto";
 
 const logger = getLogger();
 
-export const createInvitationService = (
-  repo: InvitationRepository,
-  mail: EmailJobPublisher
-) => ({
+export const createInvitationService = (repo: InvitationRepository) => ({
   inviteClient: async (
     data: InviteClientRequest,
     adminUserId: string,
@@ -40,34 +37,30 @@ export const createInvitationService = (
       throw new ConflictError("Ya existe una invitación pendiente para este correo");
     }
 
-    const rawToken = randomBytes(32).toString("hex");
+    const rawToken = createActionToken();
 
-    await repo.createInvitation({
-      email: data.email,
-      firstName: data.first_name,
-      lastName: data.last_name,
-      clientKind: data.client_kind,
-      companyName: data.company_name ?? null,
-      token: rawToken,
-      createdBy: adminUserId,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    await repo.transaction(async (tx) => {
+      await tx.createInvitation({
+        email: data.email,
+        firstName: data.first_name,
+        lastName: data.last_name,
+        clientKind: data.client_kind,
+        companyName: data.company_name ?? null,
+        token: hashActionToken(rawToken),
+        createdBy: adminUserId,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      });
+      await tx.createEmailOutboxEvent(
+        encryptEmailJob({ type: "client_invite", to: data.email, token: rawToken })
+      );
+      await tx.createAuditLog(adminUserId, "invitation_created", ip, userAgent, {
+        email: data.email,
+        first_name: data.first_name,
+        last_name: data.last_name,
+        client_kind: data.client_kind,
+        company_name: data.company_name ?? null,
+      });
     });
-
-    await repo.createAuditLog(adminUserId, "invitation_created", ip, userAgent, {
-      email: data.email,
-      first_name: data.first_name,
-      last_name: data.last_name,
-      client_kind: data.client_kind,
-      company_name: data.company_name ?? null,
-    });
-
-    mail
-      .enqueue({
-        type: "client_invite",
-        to: data.email,
-        token: rawToken,
-      })
-      .catch((err) => logger.error({ err, topic: "mail enqueue invite" }, "enqueue failed"));
 
     return env.NODE_ENV === "test" ? { token: rawToken } : undefined;
   },

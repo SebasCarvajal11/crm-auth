@@ -1,7 +1,5 @@
 import { hash, compare } from "bcrypt";
-import { randomBytes } from "crypto";
 import type { PasswordRepository } from "./ports/auth-repositories.port";
-import type { EmailJobPublisher } from "../../email/transactional-email.types";
 import { env } from "../../config/env";
 import {
   UnauthorizedError,
@@ -10,13 +8,12 @@ import {
 } from "../../shared/middlewares/error-handler.middleware";
 import { BCRYPT_ROUNDS, PASSWORD_RESET_TTL_MS } from "./auth.constants";
 import { getLogger } from "../../shared/logger";
+import { createActionToken, hashActionToken } from "./action-token";
+import { encryptEmailJob } from "../../email/email-outbox-crypto";
 
 const logger = getLogger();
 
-export const createPasswordService = (
-  repo: PasswordRepository,
-  mail: EmailJobPublisher
-) => ({
+export const createPasswordService = (repo: PasswordRepository) => ({
   forgotPassword: async (email: string, ip: string, userAgent: string) => {
     const user = await repo.findByEmail(email);
 
@@ -62,25 +59,21 @@ export const createPasswordService = (
       }
     }
 
-    const rawToken = randomBytes(32).toString("hex");
+    const rawToken = createActionToken();
 
     await repo.transaction(async (txRepo) => {
       await txRepo.createPasswordReset({
         userId: user.id,
-        token: rawToken,
+        token: hashActionToken(rawToken),
         expiresAt: new Date(Date.now() + PASSWORD_RESET_TTL_MS),
       });
 
+      await txRepo.createEmailOutboxEvent(
+        encryptEmailJob({ type: "password_reset", to: user.email, token: rawToken })
+      );
+
       await txRepo.createAuditLog(user.id, "password_reset_requested", ip, userAgent);
     });
-
-    mail
-      .enqueue({
-        type: "password_reset",
-        to: user.email,
-        token: rawToken,
-      })
-      .catch((err) => logger.error({ err, topic: "mail enqueue forgot" }, "enqueue failed"));
 
     return env.NODE_ENV === "test" ? { token: rawToken } : undefined;
   },

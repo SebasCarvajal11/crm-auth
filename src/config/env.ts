@@ -78,14 +78,20 @@ const envSchema = z.object({
     .default("false")
     .transform((v) => v === "true"),
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
-  /**
-   * Solo para suites automatizadas locales: incluir `temp_password` en register-worker / invite-admin.
-   * Requiere además NODE_ENV=test. Nunca activar en entornos accesibles.
-   */
-  EXPOSE_TEMP_PASSWORDS: envBoolean(false),
   /** URLs en correos (SPA): reset e invitación. */
   APP_PUBLIC_URL: z.string().url().default("http://localhost:5173"),
   MAIL_FROM: z.string().min(3).default("CIMA CRM <noreply@localhost>"),
+  /** Clave Base64 de 32 bytes para cifrar payloads pendientes del email outbox. */
+  EMAIL_OUTBOX_ENCRYPTION_KEY: z.string().refine(
+    (value) => {
+      try {
+        return Buffer.from(value, "base64").length === 32;
+      } catch {
+        return false;
+      }
+    },
+    "EMAIL_OUTBOX_ENCRYPTION_KEY debe ser una clave Base64 de 32 bytes"
+  ).optional(),
   MAIL_TRANSPORT: z.enum(["smtp", "log"]).default("log"),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().positive().optional(),
@@ -94,7 +100,6 @@ const envSchema = z.object({
   SMTP_TLS_SERVERNAME: z.string().optional(),
   SMTP_SECURE: envBoolean(false),
   SMTP_REQUIRE_TLS: envBoolean(false),
-  ADMIN_INVITE_SECRET: z.string().min(8).optional(),
   /** Días de retención de tokens usados/revocados antes de borrarlos. */
   TOKEN_CLEANUP_RETENTION_DAYS: z.coerce.number().int().min(1).max(365).default(30),
   /** Intervalo del worker de limpieza (ms). Por defecto 24 h. */
@@ -158,6 +163,30 @@ const envSchema = z.object({
           path: ["SMTP_PASS"],
         });
       }
+    }
+
+    if (data.NODE_ENV === "production" && !data.REDIS_URL) {
+      ctx.addIssue({
+        code: "custom",
+        message: "REDIS_URL es obligatoria en producción para asegurar rate limiting y entrega de correos",
+        path: ["REDIS_URL"],
+      });
+    }
+
+    if (data.NODE_ENV !== "test" && !data.EMAIL_OUTBOX_ENCRYPTION_KEY) {
+      ctx.addIssue({
+        code: "custom",
+        message: "EMAIL_OUTBOX_ENCRYPTION_KEY es obligatoria fuera de pruebas",
+        path: ["EMAIL_OUTBOX_ENCRYPTION_KEY"],
+      });
+    }
+
+    if (data.NODE_ENV === "production" && !data.APP_PUBLIC_URL.startsWith("https://")) {
+      ctx.addIssue({
+        code: "custom",
+        message: "APP_PUBLIC_URL debe usar HTTPS en producción para enlaces de correo seguros",
+        path: ["APP_PUBLIC_URL"],
+      });
     }
   });
 

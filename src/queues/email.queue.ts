@@ -1,13 +1,6 @@
 import { Queue } from "bullmq";
 import { getRedisConnection } from "../shared/redis";
-import { sendTransactionalEmail } from "../email/mailer";
-import type {
-  EmailJobPublisher,
-  TransactionalEmailJob,
-} from "../email/transactional-email.types";
-import { getLogger, traceStorage } from "../shared/logger";
-
-const logger = getLogger();
+import type { TransactionalEmailJob } from "../email/transactional-email.types";
 
 const QUEUE_NAME = "mod-auth-email";
 
@@ -33,31 +26,3 @@ export const getEmailQueue = (): Queue<TransactionalEmailJob> | undefined => {
 };
 
 export const EMAIL_QUEUE_NAME = QUEUE_NAME;
-
-/**
- * Encola en Redis si hay `REDIS_URL`; si no, envía en segundo plano sin bloquear la HTTP
- * (sin persistencia ni reintentos distribuidos).
- */
-export function createEmailJobPublisher(): EmailJobPublisher {
-  return {
-    enqueue: async (job: TransactionalEmailJob) => {
-      const traceId = traceStorage.getStore();
-      if (traceId) {
-        (job as any).traceId = traceId;
-      }
-      const queue = getEmailQueue();
-      try {
-        if (queue) {
-          await queue.add("send", job);
-          return;
-        }
-        void sendTransactionalEmail(job).catch((err) => {
-          logger.error({ err, topic: "email direct" }, "send failed");
-        });
-      } catch (err) {
-        logger.error({ err, topic: "email enqueue" }, "enqueue failed");
-        void sendTransactionalEmail(job).catch((e) => logger.error({ err: e, topic: "email fallback" }, "fallback send failed"));
-      }
-    },
-  };
-}

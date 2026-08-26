@@ -4,10 +4,19 @@ import { getLogger } from "../shared/logger";
 import { startReplayRequestListener, stopReplayRequestListener } from "../shared/replay-request-listener";
 import { startWorkerHealthcheck } from "../shared/worker-health";
 import { pool } from "../db/connection";
-import { getRedisConnection } from "../shared/redis";
+import { getRedisConnection, initRedis } from "../shared/redis";
 import { serviceMetrics } from "../app";
 
 const logger = getLogger();
+
+if (!env.REDIS_URL) {
+  throw new Error("REDIS_URL es requerida para el worker de outbox de identidad");
+}
+
+// Este worker no comparte proceso con el servidor, así que no puede depender
+// de la inicialización Redis realizada durante el arranque HTTP.
+initRedis(env.REDIS_URL);
+
 const intervalMs = env.IDENTITY_OUTBOX_INTERVAL_MS;
 const batchSize = env.IDENTITY_OUTBOX_BATCH_SIZE;
 

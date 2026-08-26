@@ -136,6 +136,23 @@ export const identityOutbox = authSchema.table(
   ]
 );
 
+/** Encripta payloads de correo hasta que el worker los publica en BullMQ. */
+export const emailOutbox = authSchema.table(
+  "email_outbox",
+  {
+    id: uuid("id").primaryKey().$defaultFn(() => uuidv7()),
+    payload: jsonb("payload").$type<{ ciphertext: string }>().notNull(),
+    status: varchar("status", { length: 20 }).default("pending").notNull(),
+    attempts: integer("attempts").default(0).notNull(),
+    availableAt: timestamp("available_at", { mode: "date" }).defaultNow().notNull(),
+    publishedAt: timestamp("published_at", { mode: "date" }),
+    lastError: varchar("last_error", { length: 1000 }),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [index("email_outbox_status_available_idx").on(t.status, t.availableAt)]
+);
+
 export const usersRelations = relations(users, ({ many }) => ({
   refreshTokens: many(refreshTokens),
   invitationsCreated: many(invitations),

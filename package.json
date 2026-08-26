@@ -7,6 +7,7 @@
     "predev": "pnpm --prefix cima-contracts build",
     "dev": "tsx watch src/server.ts",
     "worker:email": "tsx src/workers/email.worker.ts",
+    "worker:email-outbox": "tsx src/workers/email-outbox.worker.ts",
     "worker:identity-outbox": "tsx src/workers/identity-outbox.worker.ts",
     "worker:cleanup": "tsx src/workers/token-cleanup.worker.ts",
     "pii:clean": "tsx src/scripts/pii-clean.ts",

@@ -10,16 +10,7 @@ export type TransactionalEmailJob =
       token: string;
     }
   | {
-      type: "worker_welcome";
-      to: string;
-      tempPassword: string;
-    }
-  | {
       type: "email_verify";
       to: string;
       token: string;
     };
-
-export interface EmailJobPublisher {
-  enqueue(job: TransactionalEmailJob): Promise<void>;
-}

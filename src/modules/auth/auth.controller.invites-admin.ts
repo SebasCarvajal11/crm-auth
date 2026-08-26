@@ -30,7 +30,7 @@ export const createInvitesAdminControllerHandlers = (
 
     return c.json(
       {
-        message: env.NODE_ENV === "test" ? "Administrador creado" : "Administrador creado y correo enviado",
+        message: env.NODE_ENV === "test" ? "Invitación de administrador creada" : "Invitación de administrador creada y correo encolado",
         data: result,
       },
       201
@@ -44,7 +44,7 @@ export const createInvitesAdminControllerHandlers = (
 
     return c.json(
       {
-        message: env.NODE_ENV === 'test' ? 'Invitacion creada' : 'Invitacion creada y correo enviado',
+        message: env.NODE_ENV === 'test' ? 'Invitacion creada' : 'Invitacion creada y correo encolado',
         ...(env.NODE_ENV === 'test' && result ? { data: { token: result.token } } : {}),
       },
       201

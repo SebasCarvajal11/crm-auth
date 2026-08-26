@@ -859,7 +859,7 @@ components:
 
     InviteAdminRequest:
       type: object
-      required: [email, first_name, last_name, secret_password]
+      required: [email, first_name, last_name]
       properties:
         email:
           type: string
@@ -867,8 +867,6 @@ components:
         first_name:
           type: string
         last_name:
-          type: string
-        secret_password:
           type: string
 
     AcceptInviteRequest:

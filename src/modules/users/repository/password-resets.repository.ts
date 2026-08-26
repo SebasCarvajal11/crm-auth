@@ -2,6 +2,7 @@ import type { DbOrTx } from "../users.repository";
 import { and, count, desc, eq, gte } from "drizzle-orm";
 import { passwordResets } from "../../../db/schema";
 import type { NewPasswordReset } from "../users.types";
+import { hashActionToken } from "../../auth/action-token";
 
 export const createPasswordResetsRepository = (conn: DbOrTx) => ({
   createPasswordReset: async (data: NewPasswordReset) => {
@@ -10,12 +11,21 @@ export const createPasswordResetsRepository = (conn: DbOrTx) => ({
   },
 
   findPasswordResetByToken: async (token: string) => {
+    const tokenHash = hashActionToken(token);
     const [reset] = await conn
+      .select()
+      .from(passwordResets)
+      // Keep the raw-token fallback only for links issued before this change.
+      .where(eq(passwordResets.token, tokenHash))
+      .limit(1);
+    if (reset) return reset;
+
+    const [legacyReset] = await conn
       .select()
       .from(passwordResets)
       .where(eq(passwordResets.token, token))
       .limit(1);
-    return reset ?? null;
+    return legacyReset ?? null;
   },
 
   findLatestPasswordResetForUser: async (userId: string) => {

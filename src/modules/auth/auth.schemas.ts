@@ -65,7 +65,6 @@ export const InviteAdminSchema = z.object({
   email: z.string().email().max(255),
   first_name: nameField,
   last_name: nameField,
-  secret_password: z.string().min(1, "La contraseña secreta es requerida"),
 });
 
 export const ForgotPasswordSchema = z.object({

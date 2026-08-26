@@ -12,7 +12,6 @@ import { authMiddleware } from "./shared/middlewares/auth.middleware";
 import { securityHeadersMiddleware } from "./shared/middlewares/security.middleware";
 import { createUsersRepository } from "./modules/users/users.repository";
 import { createAuthServices } from "./modules/auth/auth.service";
-import { createEmailJobPublisher } from "./queues/email.queue";
 import { getRedisConnection } from "./shared/redis";
 import { checkPostgres, checkRedis } from "./shared/health";
 import { buildHealthResponse } from "@sebascarvajal11/cima-contracts/health";
@@ -28,8 +27,7 @@ import { initLogger } from "./shared/logger";
 import { requestLoggerMiddleware } from "./shared/middlewares/request-logger.middleware";
 
 const logger = initLogger("mod-auth");
-const mailPublisher = createEmailJobPublisher();
-const authServices = createAuthServices(createUsersRepository(), mailPublisher);
+const authServices = createAuthServices(createUsersRepository());
 const healthStartTime = Date.now();
 
 /** Instancia de métricas compartida con los workers de este proceso. */

@@ -1,6 +1,4 @@
-import { randomBytes } from "crypto";
 import type { EmailVerificationRepository } from "./ports/auth-repositories.port";
-import type { EmailJobPublisher } from "../../email/transactional-email.types";
 import {
   NotFoundError,
   ConflictError,
@@ -8,13 +6,12 @@ import {
 } from "../../shared/middlewares/error-handler.middleware";
 import { EMAIL_VERIFY_TTL_MS } from "./auth.constants";
 import { getLogger } from "../../shared/logger";
+import { createActionToken, hashActionToken } from "./action-token";
+import { encryptEmailJob } from "../../email/email-outbox-crypto";
 
 const logger = getLogger();
 
-export const createEmailVerificationService = (
-  repo: EmailVerificationRepository,
-  mail: EmailJobPublisher
-) => ({
+export const createEmailVerificationService = (repo: EmailVerificationRepository) => ({
   requestEmailVerification: async (
     userId: string,
     ip: string,
@@ -29,20 +26,21 @@ export const createEmailVerificationService = (
         return { sent: false as const };
       }
 
-      const rawToken = randomBytes(32).toString("hex");
+      const rawToken = createActionToken();
       await tx.createEmailVerification({
         userId: user.id,
-        token: rawToken,
+        token: hashActionToken(rawToken),
         expiresAt: new Date(Date.now() + EMAIL_VERIFY_TTL_MS),
       });
 
-      mail
-        .enqueue({ type: "email_verify", to: user.email, token: rawToken })
-        .catch((err) => logger.error({ err, topic: "mail enqueue verify" }, "enqueue failed"));
+      await tx.createEmailOutboxEvent(
+        encryptEmailJob({ type: "email_verify", to: user.email, token: rawToken })
+      );
 
       await tx.createAuditLog(userId, "email_verification_requested", ip, userAgent);
       return { sent: true as const };
     });
+
   },
 
   verifyEmailWithToken: async (token: string, ip: string, userAgent: string) => {

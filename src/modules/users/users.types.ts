@@ -7,6 +7,7 @@ import type {
   emailVerifications,
   auditLogs,
   identityOutbox,
+  emailOutbox,
 } from "../../db/schema";
 
 export type User = InferSelectModel<typeof users>;
@@ -28,6 +29,7 @@ export type AuditLog = InferSelectModel<typeof auditLogs>;
 export type AuditDetails = Record<string, unknown>;
 
 export type IdentityOutboxEvent = InferSelectModel<typeof identityOutbox>;
+export type EmailOutboxEvent = InferSelectModel<typeof emailOutbox>;
 
 export type UserPatch = {
   passwordHash?: string;

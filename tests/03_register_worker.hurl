@@ -1,6 +1,6 @@
 # ============================================================
 # 03 — POST /auth/register-worker  (solo Admin)
-# Requiere mod-auth con NODE_ENV=test y EXPOSE_TEMP_PASSWORDS=true
+# Requiere mod-auth con NODE_ENV=test para exponer el token de invitación.
 # ============================================================
 
 POST {{base_url}}/api/v1/auth/login
