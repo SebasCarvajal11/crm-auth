@@ -15,6 +15,7 @@
     "start": "tsx src/server.ts",
     "preinstall": "pnpm dlx only-allow pnpm",
     "db:bootstrap": "tsx src/db/scripts/bootstrap.ts",
+    "db:baseline-legacy-migrations": "tsx src/db/scripts/baseline-legacy-migrations.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push --force",
