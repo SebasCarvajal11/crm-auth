@@ -38,6 +38,13 @@ worker.on("failed", (job, err) => {
   logger.error({ err, topic: "worker:email", jobId: job?.id }, "job failed");
 });
 
+// BullMQ reporta aquí errores de conexión y de ciclo de vida que no pertenecen
+// a un trabajo concreto. Sin este listener un worker puede parecer levantado
+// mientras no puede consumir la cola.
+worker.on("error", (err) => {
+  logger.error({ err, topic: "worker:email" }, "worker error");
+});
+
 worker.on("completed", (job) => {
   logger.info({ topic: "worker:email", jobId: job.id }, "enviado");
 });
