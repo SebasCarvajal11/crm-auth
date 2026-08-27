@@ -26,7 +26,7 @@
     "jwt:gen-keys": "tsx src/scripts/gen-jwt-keys.ts",
     "openapi:check": "node scripts/validate-openapi.mjs",
     "gateway:validate": "tsx scripts/validate-manifest.mjs",
-    "test:contract": "hurl --test --variable base_url=http://localhost:28080 tests/09_auth_gateway.hurl",
+    "test:contract": "hurl --test --variable base_url=http://localhost:28080 --variable TEST_SUFFIX=contract tests/09_auth_gateway.hurl tests/13_email_gateway_flows.hurl",
     "test": "tsx src/scripts/run-hurl-suite.ts",
     "test:rate-limit": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-rate-limit.ps1",
     "test:unit": "vitest run"
