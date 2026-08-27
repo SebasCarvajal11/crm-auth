@@ -73,6 +73,8 @@ const envSchema = z.object({
    */
   REFRESH_COOKIE_PATH: z.string().min(1).default("/api/v1/auth/refresh"),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+  /** Contexto de despliegue; conserva las garantías de seguridad aunque el runtime use NODE_ENV=production. */
+  APP_ENV: z.enum(["development", "staging", "production", "test"]).optional(),
   MOD_AUTH_CORS: z
     .union([z.literal("true"), z.literal("false")])
     .default("false")
@@ -133,6 +135,9 @@ const envSchema = z.object({
     RATE_LIMIT_FORGOT_PASSWORD_WINDOW_MS: z.coerce.number().int().positive().default(60 * 60 * 1000),
   })
   .superRefine((data, ctx) => {
+    const effectiveAppEnv = data.APP_ENV ?? (
+      data.NODE_ENV === "production" ? "production" : data.NODE_ENV === "test" ? "test" : "development"
+    );
 
     if (data.MAIL_TRANSPORT === "smtp") {
       if (!data.SMTP_HOST) {
@@ -181,7 +186,7 @@ const envSchema = z.object({
       });
     }
 
-    if (data.NODE_ENV === "production" && !data.APP_PUBLIC_URL.startsWith("https://")) {
+    if (effectiveAppEnv === "production" && !data.APP_PUBLIC_URL.startsWith("https://")) {
       ctx.addIssue({
         code: "custom",
         message: "APP_PUBLIC_URL debe usar HTTPS en producción para enlaces de correo seguros",
@@ -198,4 +203,8 @@ if (!parsed.success) {
   process.exit(1);
 }
 
-export const env = parsed.data;
+const effectiveAppEnv = parsed.data.APP_ENV ?? (
+  parsed.data.NODE_ENV === "production" ? "production" : parsed.data.NODE_ENV === "test" ? "test" : "development"
+);
+
+export const env = { ...parsed.data, APP_ENV: effectiveAppEnv };
