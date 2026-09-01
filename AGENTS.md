@@ -53,13 +53,15 @@
 
 ## Workers and Background Processes
 
-`crm-auth` manages three background workers executed as isolated processes:
+`crm-auth` manages four background workers executed as isolated processes:
 
 1. **Email Worker** (`pnpm worker:email`): Handles outbound transactional emails via BullMQ.
    - *Dependencies*: Redis (connection URL, prefix: `auth`, queue: `email-queue`).
-2. **Identity Outbox Worker** (`pnpm worker:identity-outbox`): Polling publisher that processes identity outbox table events.
+2. **Email Outbox Worker** (`pnpm worker:email-outbox`): Publishes encrypted, transactionally persisted email jobs to BullMQ after the business transaction commits.
+   - *Dependencies*: PostgreSQL (`schema_auth.email_outbox`), Redis, and `EMAIL_OUTBOX_ENCRYPTION_KEY`.
+3. **Identity Outbox Worker** (`pnpm worker:identity-outbox`): Polling publisher that processes identity outbox table events.
    - *Dependencies*: PostgreSQL (`schema_auth` schema, `identity_outbox` table), Redis (publishes to `stream:auth.identity`).
-3. **Token Cleanup Worker** (`pnpm worker:cleanup`): Triggers scheduled cleanup of expired tokens.
+4. **Token Cleanup Worker** (`pnpm worker:cleanup`): Triggers scheduled cleanup of expired tokens.
    - *Dependencies*: PostgreSQL (`schema_auth` schema).
 
 ### Healthcheck and Graceful Shutdown
