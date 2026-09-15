@@ -82,6 +82,8 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
   /** URLs en correos (SPA): reset e invitación. */
   APP_PUBLIC_URL: z.string().url().default("http://localhost:5173"),
+  /** URL base del servicio de media para despacho de correos */
+  MEDIA_SERVICE_URL: z.string().default("http://crm-media:3002"),
   MAIL_FROM: z.string().min(3).default("CIMA CRM <noreply@localhost>"),
   /** Clave Base64 de 32 bytes para cifrar payloads pendientes del email outbox. */
   EMAIL_OUTBOX_ENCRYPTION_KEY: z.string().refine(
@@ -138,37 +140,6 @@ const envSchema = z.object({
     const effectiveAppEnv = data.APP_ENV ?? (
       data.NODE_ENV === "production" ? "production" : data.NODE_ENV === "test" ? "test" : "development"
     );
-
-    if (data.MAIL_TRANSPORT === "smtp") {
-      if (!data.SMTP_HOST) {
-        ctx.addIssue({
-          code: "custom",
-          message: "SMTP_HOST es obligatorio si MAIL_TRANSPORT=smtp",
-          path: ["SMTP_HOST"],
-        });
-      }
-      if (data.SMTP_PORT === undefined) {
-        ctx.addIssue({
-          code: "custom",
-          message: "SMTP_PORT es obligatorio si MAIL_TRANSPORT=smtp",
-          path: ["SMTP_PORT"],
-        });
-      }
-      if (!data.SMTP_USER) {
-        ctx.addIssue({
-          code: "custom",
-          message: "SMTP_USER es obligatorio si MAIL_TRANSPORT=smtp",
-          path: ["SMTP_USER"],
-        });
-      }
-      if (!data.SMTP_PASS) {
-        ctx.addIssue({
-          code: "custom",
-          message: "SMTP_PASS es obligatorio si MAIL_TRANSPORT=smtp",
-          path: ["SMTP_PASS"],
-        });
-      }
-    }
 
     if (data.NODE_ENV === "production" && !data.REDIS_URL) {
       ctx.addIssue({

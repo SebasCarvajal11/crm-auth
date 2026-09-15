@@ -59,3 +59,5 @@ Desktop.ini
 coverage/
 .nyc_output
 test-results/
+playwright-report/
+.turbo/
