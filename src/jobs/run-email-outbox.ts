@@ -1,15 +1,7 @@
 import { decryptEmailJob } from "../email/email-outbox-crypto";
-import { hashActionToken } from "../modules/auth/action-token";
+import { env } from "../config/env";
 import { createUsersRepository } from "../modules/users/users.repository";
 import { dispatchTransactionalEmailToMedia } from "../email/media-email-client";
-
-/**
- * Identificador estable para que reintentar un evento no duplique el correo.
- * BullMQ reserva `:` para sus claves internas, por eso el identificador usa
- * únicamente prefijos alfanuméricos y guiones.
- */
-export const createEmailJobId = (job: { type: string; token: string }): string =>
-  `email-${job.type}-${hashActionToken(job.token)}`;
 
 export async function runEmailOutbox(batchSize = 50) {
   const repo = createUsersRepository();
@@ -20,7 +12,13 @@ export async function runEmailOutbox(batchSize = 50) {
   for (const event of events) {
     try {
       const job = decryptEmailJob(event.payload);
-      await dispatchTransactionalEmailToMedia(job);
+      const ttl = job.type === "password_reset" ? env.PASSWORD_RESET_TTL_MS
+        : job.type === "email_verify" ? env.EMAIL_VERIFY_TTL_MS : 7 * 86400_000;
+      if (event.createdAt.getTime() + Math.min(ttl, 7 * 86400_000) <= Date.now()) {
+        await repo.markEmailOutboxExpired(event.id);
+        continue;
+      }
+      await dispatchTransactionalEmailToMedia(job, event);
       await repo.markEmailOutboxPublished(event.id);
       published += 1;
     } catch (error) {

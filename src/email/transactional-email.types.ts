@@ -1,16 +1,2 @@
-export type TransactionalEmailJob =
-  | {
-      type: "password_reset";
-      to: string;
-      token: string;
-    }
-  | {
-      type: "client_invite";
-      to: string;
-      token: string;
-    }
-  | {
-      type: "email_verify";
-      to: string;
-      token: string;
-    };
+import type { EmailTemplateName } from "@sebascarvajal11/cima-contracts";
+export type TransactionalEmailJob = { type: EmailTemplateName; to: string; token: string };

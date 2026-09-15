@@ -33,23 +33,33 @@ export const createInvitationService = (repo: InvitationRepository) => ({
     }
 
     const pendingInvite = await repo.findPendingInvitationByEmail(data.email);
-    if (pendingInvite) {
-      throw new ConflictError("Ya existe una invitación pendiente para este correo");
-    }
-
     const rawToken = createActionToken();
+    const token = hashActionToken(rawToken);
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
     await repo.transaction(async (tx) => {
-      await tx.createInvitation({
-        email: data.email,
-        firstName: data.first_name,
-        lastName: data.last_name,
-        clientKind: data.client_kind,
-        companyName: data.company_name ?? null,
-        token: hashActionToken(rawToken),
-        createdBy: adminUserId,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      });
+      if (pendingInvite) {
+        await tx.updateInvitation(pendingInvite.id, {
+          firstName: data.first_name,
+          lastName: data.last_name,
+          clientKind: data.client_kind,
+          companyName: data.company_name ?? null,
+          token,
+          createdBy: adminUserId,
+          expiresAt,
+        });
+      } else {
+        await tx.createInvitation({
+          email: data.email,
+          firstName: data.first_name,
+          lastName: data.last_name,
+          clientKind: data.client_kind,
+          companyName: data.company_name ?? null,
+          token,
+          createdBy: adminUserId,
+          expiresAt,
+        });
+      }
       await tx.createEmailOutboxEvent(
         encryptEmailJob({ type: "client_invite", to: data.email, token: rawToken })
       );
@@ -59,8 +69,10 @@ export const createInvitationService = (repo: InvitationRepository) => ({
         last_name: data.last_name,
         client_kind: data.client_kind,
         company_name: data.company_name ?? null,
+        renewed: Boolean(pendingInvite),
       });
     });
+
 
     return env.NODE_ENV === "test" ? { token: rawToken } : undefined;
   },

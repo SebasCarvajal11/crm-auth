@@ -48,4 +48,14 @@ export const createInvitationsRepository = (conn: DbOrTx) => ({
       .set({ isUsed: true, acceptedAt: new Date() })
       .where(eq(invitations.id, id));
   },
+
+  updateInvitation: async (id: string, data: Partial<NewInvitation>) => {
+    const [invitation] = await conn
+      .update(invitations)
+      .set(data)
+      .where(eq(invitations.id, id))
+      .returning();
+    return invitation;
+  },
 });
+

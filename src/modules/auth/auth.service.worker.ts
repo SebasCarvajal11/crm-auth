@@ -30,21 +30,42 @@ export const createWorkerRegistrationService = (repo: WorkerRegistrationReposito
     }
 
     const pendingInvite = await repo.findPendingInvitationByEmail(data.email);
-    if (pendingInvite) {
-      throw new ConflictError("Ya existe una invitación pendiente para este correo");
-    }
-
     const rawToken = createActionToken();
+    const token = hashActionToken(rawToken);
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
     await repo.transaction(async (tx) => {
-      await tx.createInvitation({
-        email: data.email, firstName: data.first_name, lastName: data.last_name,
-        role: "worker", profession: data.profession, token: hashActionToken(rawToken),
-        createdBy: adminUserId, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      });
-      await tx.createEmailOutboxEvent(encryptEmailJob({ type: "client_invite", to: data.email, token: rawToken }));
+      if (pendingInvite) {
+        await tx.updateInvitation(pendingInvite.id, {
+          firstName: data.first_name,
+          lastName: data.last_name,
+          role: "worker",
+          profession: data.profession,
+          token,
+          createdBy: adminUserId,
+          expiresAt,
+        });
+      } else {
+        await tx.createInvitation({
+          email: data.email,
+          firstName: data.first_name,
+          lastName: data.last_name,
+          role: "worker",
+          profession: data.profession,
+          token,
+          createdBy: adminUserId,
+          expiresAt,
+        });
+      }
+      await tx.createEmailOutboxEvent(
+        encryptEmailJob({ type: "worker_invite", to: data.email, token: rawToken })
+      );
       await tx.createAuditLog(adminUserId, "worker_registered", ip, userAgent, {
-        email: data.email, first_name: data.first_name, last_name: data.last_name, profession: data.profession,
+        email: data.email,
+        first_name: data.first_name,
+        last_name: data.last_name,
+        profession: data.profession,
+        renewed: Boolean(pendingInvite),
       });
     });
 
@@ -81,23 +102,42 @@ export const createWorkerRegistrationService = (repo: WorkerRegistrationReposito
     }
 
     const pendingInvite = await repo.findPendingInvitationByEmail(data.email);
-    if (pendingInvite) {
-      throw new ConflictError("Ya existe una invitación pendiente para este correo");
-    }
-
     const rawToken = createActionToken();
+    const token = hashActionToken(rawToken);
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
     await repo.transaction(async (tx) => {
-      await tx.createInvitation({
-        email: data.email, firstName: data.first_name, lastName: data.last_name,
-        role: "admin", token: hashActionToken(rawToken), createdBy: adminUserId,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      });
-      await tx.createEmailOutboxEvent(encryptEmailJob({ type: "client_invite", to: data.email, token: rawToken }));
+      if (pendingInvite) {
+        await tx.updateInvitation(pendingInvite.id, {
+          firstName: data.first_name,
+          lastName: data.last_name,
+          role: "admin",
+          token,
+          createdBy: adminUserId,
+          expiresAt,
+        });
+      } else {
+        await tx.createInvitation({
+          email: data.email,
+          firstName: data.first_name,
+          lastName: data.last_name,
+          role: "admin",
+          token,
+          createdBy: adminUserId,
+          expiresAt,
+        });
+      }
+      await tx.createEmailOutboxEvent(
+        encryptEmailJob({ type: "admin_invite", to: data.email, token: rawToken })
+      );
       await tx.createAuditLog(adminUserId, "admin_invited", ip, userAgent, {
-        email: data.email, first_name: data.first_name, last_name: data.last_name,
+        email: data.email,
+        first_name: data.first_name,
+        last_name: data.last_name,
+        renewed: Boolean(pendingInvite),
       });
     });
+
 
     return {
       user: {

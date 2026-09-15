@@ -83,8 +83,9 @@ const envSchema = z.object({
   /** URLs en correos (SPA): reset e invitación. */
   APP_PUBLIC_URL: z.string().url().default("http://localhost:5173"),
   /** URL base del servicio de media para despacho de correos */
-  MEDIA_SERVICE_URL: z.string().default("http://crm-media:3002"),
-  MAIL_FROM: z.string().min(3).default("CIMA CRM <noreply@localhost>"),
+  MEDIA_SERVICE_URL: z.string().url().default("http://crm-media:3002"),
+  EMAIL_SERVICE_ISSUER: z.string().default("crm-auth"),
+  MEDIA_EMAIL_TIMEOUT_MS: z.coerce.number().int().min(1000).max(30000).default(5000),
   /** Clave Base64 de 32 bytes para cifrar payloads pendientes del email outbox. */
   EMAIL_OUTBOX_ENCRYPTION_KEY: z.string().refine(
     (value) => {
@@ -96,14 +97,6 @@ const envSchema = z.object({
     },
     "EMAIL_OUTBOX_ENCRYPTION_KEY debe ser una clave Base64 de 32 bytes"
   ).optional(),
-  MAIL_TRANSPORT: z.enum(["smtp", "log"]).default("log"),
-  SMTP_HOST: z.string().optional(),
-  SMTP_PORT: z.coerce.number().int().positive().optional(),
-  SMTP_USER: z.string().optional(),
-  SMTP_PASS: z.string().optional(),
-  SMTP_TLS_SERVERNAME: z.string().optional(),
-  SMTP_SECURE: envBoolean(false),
-  SMTP_REQUIRE_TLS: envBoolean(false),
   /** Días de retención de tokens usados/revocados antes de borrarlos. */
   TOKEN_CLEANUP_RETENTION_DAYS: z.coerce.number().int().min(1).max(365).default(30),
   /** Intervalo del worker de limpieza (ms). Por defecto 24 h. */

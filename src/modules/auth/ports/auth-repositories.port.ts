@@ -29,6 +29,7 @@ export type LoginSessionRepository = Pick<
 export type InvitationTransactionRepository = Pick<
   UsersRepository,
   | "createInvitation"
+  | "updateInvitation"
   | "findInvitationByToken"
   | "findByEmailIncludingDeleted"
   | "createUser"
@@ -45,6 +46,7 @@ export type InvitationRepository = Pick<
   | "findByEmailIncludingDeleted"
   | "findPendingInvitationByEmail"
   | "createInvitation"
+  | "updateInvitation"
   | "createAuditLog"
   | "createEmailOutboxEvent"
   | "findInvitationByToken"
@@ -56,11 +58,16 @@ export type WorkerRegistrationRepository = Pick<
   | "findByEmailIncludingDeleted"
   | "findPendingInvitationByEmail"
   | "createInvitation"
+  | "updateInvitation"
   | "createAuditLog"
 > &
   TransactionalRepository<
-    Pick<UsersRepository, "createInvitation" | "createAuditLog" | "createEmailOutboxEvent">
+    Pick<
+      UsersRepository,
+      "createInvitation" | "updateInvitation" | "createAuditLog" | "createEmailOutboxEvent"
+    >
   >;
+
 
 export type PasswordTransactionRepository = Pick<
   UsersRepository,

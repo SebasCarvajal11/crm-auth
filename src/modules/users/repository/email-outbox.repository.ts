@@ -11,6 +11,10 @@ const compactError = (error: unknown): string =>
   (error instanceof Error ? error.message : String(error)).slice(0, 1000);
 
 export const createEmailOutboxRepository = (conn: DbOrTx) => ({
+  markEmailOutboxExpired: async (id: string) => {
+    await conn.update(emailOutbox).set({ status: "expired", updatedAt: new Date(), lastError: "Email command expired" })
+      .where(eq(emailOutbox.id, id));
+  },
   createEmailOutboxEvent: async (payload: { ciphertext: string }) => {
     await conn.insert(emailOutbox).values({ payload });
   },

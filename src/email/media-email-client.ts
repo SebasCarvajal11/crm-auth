@@ -1,47 +1,37 @@
-﻿import { env } from "../config/env";
-import { getLogger } from "../shared/logger";
+import { createHash } from "node:crypto";
+import { withRetry, emailDispatchRequestSchema, emailDispatchResponseSchema } from "@sebascarvajal11/cima-contracts";
+import { env } from "../config/env";
+import { signRs256Jwt } from "../config/jwt";
 import type { TransactionalEmailJob } from "./transactional-email.types";
-
-const logger = getLogger();
 
 export async function dispatchTransactionalEmailToMedia(
   job: TransactionalEmailJob,
-  traceId?: string
-): Promise<{ success: boolean; messageId: string }> {
-  const mediaUrl = (env.MEDIA_SERVICE_URL || "http://crm-media:3002").replace(/\/$/, "");
-  const endpoint = `${mediaUrl}/api/v1/emails/send`;
-
-  const payload = {
-    to: job.to,
-    template: {
-      name: job.type,
-      variables: {
-        token: job.token,
-        to: job.to,
-        appPublicUrl: env.APP_PUBLIC_URL,
-      },
-    },
-    sync: false,
-  };
-
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(traceId ? { "x-trace-id": traceId } : {}),
-    },
-    body: JSON.stringify(payload),
+  event: { id: string; createdAt: Date },
+) {
+  const ttl = job.type === "password_reset" ? env.PASSWORD_RESET_TTL_MS
+    : job.type === "email_verify" ? env.EMAIL_VERIFY_TTL_MS : 7 * 86400_000;
+  const request = emailDispatchRequestSchema.parse({
+    version: 1, id: event.id,
+    expiresAt: new Date(event.createdAt.getTime() + Math.min(ttl, 7 * 86400_000)).toISOString(),
+    to: job.to, template: { name: job.type, variables: { token: job.token } },
   });
-
-  if (!response.ok) {
-    const errorBody = await response.text();
-    logger.error(
-      { topic: "media:email-client", status: response.status, body: errorBody },
-      "Error al despachar correo a crm-media"
-    );
-    throw new Error(`crm-media respondió status ${response.status}: ${errorBody}`);
-  }
-
-  const data = (await response.json()) as { success: boolean; messageId: string };
-  return data;
+  const body = JSON.stringify(request);
+  return withRetry(async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const jwt = signRs256Jwt({
+      iss: env.EMAIL_SERVICE_ISSUER, sub: env.EMAIL_SERVICE_ISSUER,
+      aud: "crm-media:email", purpose: "email:dispatch",
+      iat: now, exp: now + 60, bodyHash: createHash("sha256").update(body).digest("hex"),
+    }, env.JWT_PRIVATE_KEY, env.JWT_KID);
+    const response = await fetch(env.MEDIA_SERVICE_URL.replace(/\/$/, "") + "/api/v1/emails/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + jwt, "x-trace-id": event.id },
+      body, signal: AbortSignal.timeout(env.MEDIA_EMAIL_TIMEOUT_MS),
+    });
+    if (response.status !== 202) {
+      // Do not copy a peer's response into persisted errors or logs.
+      throw Object.assign(new Error("Media email dispatch failed (HTTP " + response.status + ")"), { status: response.status });
+    }
+    return emailDispatchResponseSchema.parse(await response.json());
+  }, { maxAttempts: 3, delayMs: 150 });
 }
