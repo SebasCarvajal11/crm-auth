@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import { generateOpaqueRefreshToken, hashRefreshToken } from "./auth.token-utils";
 
 describe("auth.token-utils", () => {
-  // ci: verificacion de integracion y despliegue continuo v2.5.0
   describe("generateOpaqueRefreshToken", () => {
     it("should generate a 80-character hex string", () => {
       const token = generateOpaqueRefreshToken();
