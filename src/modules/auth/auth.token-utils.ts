@@ -30,16 +30,26 @@ export const buildAccessToken = (
   return signRs256Jwt(claims, normalizePem(env.JWT_PRIVATE_KEY), env.JWT_KID);
 };
 
+export interface IssueTokenPairOptions {
+  userId: string;
+  subject: string;
+  role: "admin" | "worker" | "client";
+  email: string;
+  userAgent: string;
+  forcePasswordChange?: boolean;
+}
+
 export const issueTokenPair = async (
   repo: RefreshTokenWriter,
-  userId: string,
-  subject: string,
-  role: "admin" | "worker" | "client",
-  email: string,
-  userAgent: string,
-  forcePasswordChange: boolean
+  opts: IssueTokenPairOptions
 ) => {
-  const accessToken = buildAccessToken(subject, userId, role, email, forcePasswordChange);
+  const accessToken = buildAccessToken(
+    opts.subject,
+    opts.userId,
+    opts.role,
+    opts.email,
+    opts.forcePasswordChange
+  );
 
   const rawRefreshToken = generateOpaqueRefreshToken();
   const refreshTokenHash = hashRefreshToken(rawRefreshToken);
@@ -47,12 +57,13 @@ export const issueTokenPair = async (
   const expiresAt = new Date(Date.now() + REFRESH_TOKEN_TTL_MS);
 
   await repo.saveRefreshToken({
-    userId,
+    userId: opts.userId,
     tokenHash: refreshTokenHash,
     family: familyId,
     expiresAt,
-    deviceInfo: userAgent,
+    deviceInfo: opts.userAgent,
   });
 
   return { accessToken, rawRefreshToken };
 };
+

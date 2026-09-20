@@ -5,8 +5,8 @@ import { Hono } from "hono";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-/** Raíz del paquete mod-auth (src/openapi → dos niveles; dist/src/openapi → tres niveles). */
-function resolveModAuthRoot(): string {
+/** Raíz del paquete crm-auth (src/openapi → dos niveles; dist/src/openapi → tres niveles). */
+function resolvePackageRoot(): string {
   const fromSrcTree = join(__dirname, "..", "..");
   if (existsSync(join(fromSrcTree, "openapi", "openapi.yaml"))) return fromSrcTree;
   const fromDistTree = join(__dirname, "..", "..", "..");
@@ -23,7 +23,7 @@ const swaggerUiHtml = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>mod-auth — OpenAPI</title>
+  <title>crm-auth — OpenAPI</title>
   <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" crossorigin />
 </head>
 <body>
@@ -46,7 +46,7 @@ export const createOpenApiRoutes = () => {
   const routes = new Hono();
 
   routes.get("/openapi.yaml", (c) => {
-    const root = resolveModAuthRoot();
+    const root = resolvePackageRoot();
     const path = join(root, OPENAPI_REL);
     if (!existsSync(path)) {
       return c.json({ error: "No se encontró openapi/openapi.yaml" }, 404);

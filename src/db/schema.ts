@@ -61,7 +61,7 @@ export const refreshTokens = authSchema.table("refresh_tokens", {
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
 });
 
-/** Alta de cuenta cliente por email; datos comerciales/fiscales vivirán en mod-users / mod-crm. */
+/** Alta de cuenta cliente por email; datos comerciales/proyectos residen en crm-collab / crm-marketing. */
 export const invitations = authSchema.table("invitations", {
   id: uuid("id").primaryKey().$defaultFn(() => uuidv7()),
   email: varchar("email", { length: 255 }).notNull(),
@@ -136,7 +136,7 @@ export const identityOutbox = authSchema.table(
   ]
 );
 
-/** Encripta payloads de correo hasta que el worker los publica en BullMQ. */
+/** Cifra payloads de correo hasta que el worker los despacha a crm-media. */
 export const emailOutbox = authSchema.table(
   "email_outbox",
   {

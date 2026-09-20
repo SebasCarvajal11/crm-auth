@@ -132,7 +132,7 @@ export const createAuthRoutes = (services: AuthServices) => {
   );
 
   // ---------------------------------------------------------------------------
-  // Identidad (solo lectura; perfil en mod-users)
+  // Identidad (solo lectura de cuenta y rol)
   // ---------------------------------------------------------------------------
 
   authRoutes.get("/me", authMiddleware, authController.me);

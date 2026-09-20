@@ -73,15 +73,14 @@ export const createLoginSessionService = (repo: LoginSessionRepository) => ({
     const authResult = await repo.transaction(async (txRepo) => {
       await txRepo.markSuccessfulLogin(user.id);
 
-      const { accessToken, rawRefreshToken } = await issueTokenPair(
-        txRepo,
-        user.id,
-        user.subject,
-        user.role,
-        user.email,
+      const { accessToken, rawRefreshToken } = await issueTokenPair(txRepo, {
+        userId: user.id,
+        subject: user.subject,
+        role: user.role,
+        email: user.email,
         userAgent,
-        user.forcePasswordChange
-      );
+        forcePasswordChange: user.forcePasswordChange,
+      });
 
       await txRepo.createAuditLog(user.id, "login_success", ip, userAgent);
 

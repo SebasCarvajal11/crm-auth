@@ -17,17 +17,20 @@ Este documento define la interacción de `crm-auth` con los demás componentes d
 │  (Emite JWTs, persiste en schema_auth, produce al outbox)   │
 └──────────────┬───────────────────────────────┬──────────────┘
                │                               │
-               ▼ (Eventos de Identidad)        ▼ (Trabajos de Correo)
+               ▼ (Eventos de Identidad)        ▼ (Transactional Outbox)
      ┌──────────────────┐            ┌──────────────────┐
-     │  Redis Streams   │            │   BullMQ Queue   │
-     │ stream:auth.id.. │            │   email-queue    │
+     │  Redis Streams   │            │   email_outbox   │
+     │ stream:auth.id.. │            │ (Cifrado en DB)  │
      └─────────┬────────┘            └─────────┬────────┘
                │                               │
        ┌───────┴───────┐                       ▼
-       ▼               ▼                [ Email Worker ]
- [ crm-collab ]  [ crm-media ]                 │
+       ▼               ▼            [ Email Outbox Worker ]
+ [ crm-collab ]  [ crm-media ]                 │ (HTTP Firmado RS256)
 (Sincronizan    (Sincronizan                   ▼
- perfiles)       avatares/cuotas)        [ Servidor SMTP ]
+ perfiles)       avatares/cuotas)        [ crm-media ]
+                                               │ (Envío SMTP)
+                                               ▼
+                                         [ Proveedor SMTP ]
 ```
 
 ---
@@ -64,7 +67,7 @@ Devuelve un JSON estructurado con el estado de las dependencias vitales:
 ```json
 {
   "status": "ok",
-  "service": "mod-auth",
+  "service": "crm-auth",
   "version": "1.0.0",
   "uptimeSec": 3420,
   "dependencies": {

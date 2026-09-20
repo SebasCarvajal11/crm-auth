@@ -41,14 +41,17 @@ El servicio implementa una arquitectura por capas desacoplada con inversión de 
 ```text
 src/
 ├── config/              # Carga y validación estricta de entorno (env.ts), llaves JWT
-├── db/                  # Esquema Drizzle (schema.ts), conexión y scripts de seed
-├── email/               # Plantillas y transportes de correos transaccionales
+├── db/                  # Esquema Drizzle (schema.ts), conexión y scripts de migraciones
+├── email/               # Cliente HTTP firmado RS256 para despacho hacia crm-media y cifrado outbox
+├── gateway/             # Rutas y manifiesto del Gateway KrakenD
+├── jobs/                # Lógica de procesamiento de lotes consumida por los workers
 ├── modules/
 │   ├── auth/            # Módulo de autenticación (login, refresh, logout, password)
 │   └── users/           # Módulo de administración de usuarios y perfiles
-├── queues/              # Definiciones BullMQ para encolamiento asíncrono
-├── shared/              # Utilidades compartidas, middlewares y sanitización
-├── workers/             # Procesos de fondo independientes (Outbox, Cleanup, Email)
+├── openapi/             # Especificación OpenAPI y rutas Swagger
+├── scripts/             # Scripts de mantenimiento y pruebas
+├── shared/              # Utilidades compartidas, middlewares y observabilidad
+├── workers/             # Procesos de fondo independientes (Outbox, Cleanup)
 ├── app.ts               # Ensamblado de la aplicación Hono y middlewares globales
 └── server.ts            # Entrypoint HTTP principal con manejo de graceful shutdown
 ```
@@ -57,12 +60,11 @@ src/
 
 ## 3. Procesos en Background y Workers
 
-Para garantizar alta concurrencia y transacciones ACID sin bloqueos de I/O, las tareas pesadas o asíncronas se desacoplan en cuatro workers independientes:
+Para garantizar alta concurrencia y transacciones ACID sin bloqueos de I/O, las tareas pesadas o asíncronas se desacoplan en tres workers independientes:
 
 | Worker | Comando | Responsabilidad | Dependencias |
 | :--- | :--- | :--- | :--- |
-| **Email Worker** | `pnpm worker:email` | Procesa y despacha correos vía BullMQ hacia el servidor SMTP. | Redis (`email-queue`), SMTP |
-| **Email Outbox Worker** | `pnpm worker:email-outbox` | Polling transaccional de `email_outbox` en DB para encolar en BullMQ. | PostgreSQL (`schema_auth`), Redis |
+| **Email Outbox Worker** | `pnpm worker:email-outbox` | Polling transaccional de `email_outbox` en DB y despacho firmado RS256 a `crm-media`. | PostgreSQL (`schema_auth`), Redis |
 | **Identity Outbox Worker**| `pnpm worker:identity-outbox` | Publica eventos de identidad hacia Redis Stream (`stream:auth.identity`). | PostgreSQL (`schema_auth`), Redis |
 | **Token Cleanup Worker** | `pnpm worker:cleanup` | Purga periódica de tokens de sesión expirados o revocados. | PostgreSQL (`schema_auth`) |
 

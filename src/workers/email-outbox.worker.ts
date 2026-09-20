@@ -16,7 +16,7 @@ const tick = async () => {
   if (ticking) return;
   ticking = true;
   try {
-    const result = await runEmailOutbox(env.IDENTITY_OUTBOX_BATCH_SIZE);
+    const result = await runEmailOutbox(env.EMAIL_OUTBOX_BATCH_SIZE);
     if (result.processed > 0) logger.info({ topic: "worker:email-outbox", result }, "lote procesado");
   } catch (err) {
     logger.error({ err, topic: "worker:email-outbox" }, "error");
@@ -26,7 +26,7 @@ const tick = async () => {
 };
 
 await tick();
-const timer = setInterval(tick, env.IDENTITY_OUTBOX_INTERVAL_MS);
+const timer = setInterval(tick, env.EMAIL_OUTBOX_INTERVAL_MS);
 const shutdown = async () => {
   clearInterval(timer);
   while (ticking) await new Promise((resolve) => setTimeout(resolve, 100));

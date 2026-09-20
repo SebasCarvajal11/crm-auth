@@ -32,7 +32,7 @@ const envSchema = z.object({
   JWT_KID: z.string().min(1).default("mod-auth-rsa-1"),
   /** Opcional: issuer claim; el gateway puede exigir coincidencia en producción. */
   JWT_ISS: z.string().min(1).optional(),
-  /** Redis opcional: si está definido, la cola de emails BullMQ funciona con reintento distribuido. */
+  /** Redis opcional: requerido en producción para rate limiting distribuido y publicación de eventos. */
   REDIS_URL: z.string().url().optional(),
   /** Costo de hashing para bcrypt. */
   BCRYPT_ROUNDS: z.coerce.number().int().min(4).max(31).default(12),
@@ -117,6 +117,17 @@ const envSchema = z.object({
       .positive()
       .default(5000),
     IDENTITY_OUTBOX_BATCH_SIZE: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(500)
+      .default(50),
+    EMAIL_OUTBOX_INTERVAL_MS: z.coerce
+      .number()
+      .int()
+      .positive()
+      .default(5000),
+    EMAIL_OUTBOX_BATCH_SIZE: z.coerce
       .number()
       .int()
       .min(1)

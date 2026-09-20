@@ -16,7 +16,6 @@ services:
       DB_SCHEMA: schema_auth
       PORT: 3000
       REDIS_URL: redis://redis:6379
-      TRUST_GATEWAY_JWT_HEADERS: "false"
       REFRESH_COOKIE_PATH: /api/v1/auth/refresh
     depends_on:
       postgres_db:

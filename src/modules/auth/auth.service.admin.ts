@@ -10,6 +10,23 @@ import {
   ForbiddenError,
 } from "../../shared/middlewares/error-handler.middleware";
 
+export interface AdminAuditContext {
+  adminUserId: string;
+  adminSubject?: string;
+  ip: string;
+  userAgent: string;
+}
+
+export interface SetUserActiveParams {
+  targetSubject: string;
+  isActive: boolean;
+}
+
+export interface SetForcePasswordChangeParams {
+  targetSubject: string;
+  forcePasswordChange: boolean;
+}
+
 export const createAdminUserService = (repo: AdminUserRepository) => ({
   searchUsersByEmail: async (
     q: string,
@@ -69,65 +86,55 @@ export const createAdminUserService = (repo: AdminUserRepository) => ({
   },
 
   adminSetUserActiveBySubject: async (
-    adminSubject: string,
-    adminUserId: string,
-    targetSubject: string,
-    isActive: boolean,
-    ip: string,
-    userAgent: string
+    ctx: AdminAuditContext,
+    params: SetUserActiveParams
   ) => {
-    if (!isActive && adminSubject === targetSubject) {
+    if (!params.isActive && ctx.adminSubject === params.targetSubject) {
       throw new ForbiddenError("No puedes desactivar tu propia cuenta");
     }
 
     await repo.transaction(async (tx) => {
-      const target = await tx.findBySubjectIncludingDeleted(targetSubject);
+      const target = await tx.findBySubjectIncludingDeleted(params.targetSubject);
       if (!target) throw new NotFoundError("Usuario no encontrado");
 
-      if (target.deletedAt && isActive) {
+      if (target.deletedAt && params.isActive) {
         throw new BadRequestError("La cuenta esta archivada; restaurala antes de activarla.");
       }
 
-      const updated = await tx.updateUserById(target.id, { isActive });
+      const updated = await tx.updateUserById(target.id, { isActive: params.isActive });
       if (!updated) throw new NotFoundError("Usuario no encontrado");
 
-      await tx.createAuditLog(adminUserId, "admin_user_status_updated", ip, userAgent, {
-        target_subject: targetSubject,
-        is_active: isActive,
+      await tx.createAuditLog(ctx.adminUserId, "admin_user_status_updated", ctx.ip, ctx.userAgent, {
+        target_subject: params.targetSubject,
+        is_active: params.isActive,
       });
       await tx.createIdentityOutboxEvent("user.updated", updated);
 
-      if (!isActive) {
+      if (!params.isActive) {
         await tx.revokeAllRefreshTokensForUser(target.id);
       }
     });
   },
 
   adminSetForcePasswordChangeBySubject: async (
-    adminUserId: string,
-    targetSubject: string,
-    forcePasswordChange: boolean,
-    ip: string,
-    userAgent: string
+    ctx: AdminAuditContext,
+    params: SetForcePasswordChangeParams
   ) => {
-    const target = await repo.findBySubjectIncludingDeleted(targetSubject);
+    const target = await repo.findBySubjectIncludingDeleted(params.targetSubject);
     if (!target) throw new NotFoundError("Usuario no encontrado");
 
-    await repo.updateUserById(target.id, { forcePasswordChange });
-    await repo.createAuditLog(adminUserId, "admin_force_password_change_set", ip, userAgent, {
-      target_subject: targetSubject,
-      force_password_change: forcePasswordChange,
+    await repo.updateUserById(target.id, { forcePasswordChange: params.forcePasswordChange });
+    await repo.createAuditLog(ctx.adminUserId, "admin_force_password_change_set", ctx.ip, ctx.userAgent, {
+      target_subject: params.targetSubject,
+      force_password_change: params.forcePasswordChange,
     });
   },
 
   adminSoftDeleteBySubject: async (
-    adminSubject: string,
-    adminUserId: string,
-    targetSubject: string,
-    ip: string,
-    userAgent: string
+    ctx: AdminAuditContext,
+    targetSubject: string
   ) => {
-    if (adminSubject === targetSubject) {
+    if (ctx.adminSubject === targetSubject) {
       throw new ForbiddenError("No puedes archivar tu propia cuenta");
     }
 
@@ -143,7 +150,7 @@ export const createAdminUserService = (repo: AdminUserRepository) => ({
       if (!updated) throw new NotFoundError("Usuario no encontrado");
 
       await tx.revokeAllRefreshTokensForUser(target.id);
-      await tx.createAuditLog(adminUserId, "user_soft_deleted", ip, userAgent, {
+      await tx.createAuditLog(ctx.adminUserId, "user_soft_deleted", ctx.ip, ctx.userAgent, {
         target_subject: targetSubject,
       });
       await tx.createIdentityOutboxEvent("user.deleted", updated);
@@ -151,10 +158,8 @@ export const createAdminUserService = (repo: AdminUserRepository) => ({
   },
 
   adminRestoreUserBySubject: async (
-    adminUserId: string,
-    targetSubject: string,
-    ip: string,
-    userAgent: string
+    ctx: AdminAuditContext,
+    targetSubject: string
   ) => {
     await repo.transaction(async (tx) => {
       const target = await tx.findBySubjectIncludingDeleted(targetSubject);
@@ -164,7 +169,7 @@ export const createAdminUserService = (repo: AdminUserRepository) => ({
       const updated = await tx.updateUserById(target.id, { deletedAt: null, isActive: true });
       if (!updated) throw new NotFoundError("Usuario no encontrado");
 
-      await tx.createAuditLog(adminUserId, "user_restored", ip, userAgent, {
+      await tx.createAuditLog(ctx.adminUserId, "user_restored", ctx.ip, ctx.userAgent, {
         target_subject: targetSubject,
       });
       await tx.createIdentityOutboxEvent("user.updated", updated);

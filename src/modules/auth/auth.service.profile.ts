@@ -1,7 +1,7 @@
 import type { ProfileRepository } from "./ports/auth-repositories.port";
 import { NotFoundError } from "../../shared/middlewares/error-handler.middleware";
 
-/** Solo lectura de identidad; perfil UI/CRM en mod-users. */
+/** Solo lectura de identidad básica; perfil extendido en crm-collab. */
 export const createProfileService = (repo: ProfileRepository) => ({
   getMe: async (userId: string) => {
     const user = await repo.findIdentityMeById(userId);

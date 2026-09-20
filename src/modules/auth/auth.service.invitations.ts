@@ -131,15 +131,14 @@ export const createInvitationService = (repo: InvitationRepository) => ({
 
       await tx.markSuccessfulLogin(user.id);
 
-      const { accessToken, rawRefreshToken } = await issueTokenPair(
-        tx,
-        user.id,
-        user.subject,
-        user.role,
-        user.email,
+      const { accessToken, rawRefreshToken } = await issueTokenPair(tx, {
+        userId: user.id,
+        subject: user.subject,
+        role: user.role,
+        email: user.email,
         userAgent,
-        false
-      );
+        forcePasswordChange: false,
+      });
 
       await tx.createAuditLog(user.id, "invitation_accepted", ip, userAgent, {
         invitation_id: invitation.id,

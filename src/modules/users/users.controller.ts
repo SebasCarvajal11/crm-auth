@@ -40,12 +40,8 @@ export const createUsersAdminController = (adminUserService: AdminUserService) =
     const user = c.get("user");
 
     await adminUserService.adminSetUserActiveBySubject(
-      user.sub,
-      user.userId,
-      subject,
-      body.is_active,
-      getIp(c),
-      getUa(c),
+      { adminUserId: user.userId, adminSubject: user.sub, ip: getIp(c), userAgent: getUa(c) },
+      { targetSubject: subject, isActive: body.is_active },
     );
 
     return c.json({ message: "Usuario actualizado correctamente" }, 200);
@@ -57,11 +53,8 @@ export const createUsersAdminController = (adminUserService: AdminUserService) =
     const user = c.get("user");
 
     await adminUserService.adminSetForcePasswordChangeBySubject(
-      user.userId,
-      subject,
-      body.force_password_change,
-      getIp(c),
-      getUa(c),
+      { adminUserId: user.userId, ip: getIp(c), userAgent: getUa(c) },
+      { targetSubject: subject, forcePasswordChange: body.force_password_change },
     );
 
     return c.json({ message: "Politicas del usuario actualizadas correctamente" }, 200);
@@ -72,11 +65,8 @@ export const createUsersAdminController = (adminUserService: AdminUserService) =
     const user = c.get("user");
 
     await adminUserService.adminSoftDeleteBySubject(
-      user.sub,
-      user.userId,
+      { adminUserId: user.userId, adminSubject: user.sub, ip: getIp(c), userAgent: getUa(c) },
       subject,
-      getIp(c),
-      getUa(c),
     );
 
     return c.json({ message: "Usuario archivado correctamente" }, 200);
@@ -87,10 +77,8 @@ export const createUsersAdminController = (adminUserService: AdminUserService) =
     const user = c.get("user");
 
     await adminUserService.adminRestoreUserBySubject(
-      user.userId,
+      { adminUserId: user.userId, ip: getIp(c), userAgent: getUa(c) },
       subject,
-      getIp(c),
-      getUa(c),
     );
 
     return c.json({ message: "Usuario restaurado correctamente" }, 200);

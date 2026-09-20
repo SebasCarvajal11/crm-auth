@@ -1,5 +1,5 @@
 import type { DbOrTx } from "../users.repository";
-import { and, eq, ilike, isNull } from "drizzle-orm";
+import { and, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 import { users } from "../../../db/schema";
 
 export const createUsersReadRepository = (conn: DbOrTx) => ({
@@ -89,4 +89,61 @@ export const createUsersReadRepository = (conn: DbOrTx) => ({
       .orderBy(users.email)
       .limit(limit);
   },
+
+  listUsersPaginated: async (opts: {
+    page: number;
+    limit: number;
+    role?: "admin" | "worker" | "client";
+    includeDeleted?: boolean;
+    q?: string;
+  }) => {
+    const offset = (opts.page - 1) * opts.limit;
+
+    const selection = {
+      subject: users.subject,
+      email: users.email,
+      role: users.role,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      clientKind: users.clientKind,
+      companyName: users.companyName,
+      profession: users.profession,
+      isActive: users.isActive,
+      emailVerifiedAt: users.emailVerifiedAt,
+      lastLoginAt: users.lastLoginAt,
+      lockedUntil: users.lockedUntil,
+      deletedAt: users.deletedAt,
+      forcePasswordChange: users.forcePasswordChange,
+      createdAt: users.createdAt,
+    };
+
+    const conditions = [];
+    if (!opts.includeDeleted) conditions.push(isNull(users.deletedAt));
+    if (opts.role) conditions.push(eq(users.role, opts.role));
+    if (opts.q?.trim()) {
+      const needle = `%${opts.q.trim()}%`;
+      conditions.push(
+        or(
+          ilike(users.email, needle),
+          ilike(users.firstName, needle),
+          ilike(users.lastName, needle),
+          ilike(users.companyName, needle)
+        )
+      );
+    }
+    const whereClause = conditions.length ? and(...conditions) : undefined;
+
+    const countBase = conn.select({ count: sql<number>`cast(count(*) as int)` }).from(users);
+    const [countRow] = whereClause
+      ? await countBase.where(whereClause)
+      : await countBase;
+
+    const rowsBase = conn.select(selection).from(users).orderBy(desc(users.createdAt));
+    const rows = whereClause
+      ? await rowsBase.where(whereClause).limit(opts.limit).offset(offset)
+      : await rowsBase.limit(opts.limit).offset(offset);
+
+    return { rows, total: countRow?.count ?? 0 };
+  },
 });
+
