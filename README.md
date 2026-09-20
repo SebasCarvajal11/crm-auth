@@ -1,86 +1,77 @@
-# CRM Auth
+# CRM Auth Service
 
-> Servicio de identidad y acceso para CIMA CRM.
+> Servicio de identidad, credenciales y control de acceso para CIMA CRM.
+
+[![Status](https://img.shields.io/badge/status-active-success.svg)]()
+[![Platform](https://img.shields.io/badge/platform-CIMA%20CRM-blue.svg)]()
+[![Node](https://img.shields.io/badge/node-%3E%3D22.0.0-green.svg)]()
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)]()
+
+---
 
 ## Propósito
 
-`crm-auth` es la única fuente de verdad para identidad en la plataforma CIMA CRM. Gestiona autenticación, ciclo de vida de sesiones, flujos de invitación, recuperación de contraseña, emisión de JWTs y auditoría de accesos. Ningún otro servicio tiene autoridad sobre credenciales o identidad de usuarios.
+`crm-auth` es la **única fuente de la verdad para identidad** en la plataforma CIMA CRM. Gestiona el ciclo de vida completo de usuarios, autenticación mediante credenciales, emisión de Access Tokens asimétricos (RS256), rotación de Refresh Tokens en cookies `httpOnly`, flujos de invitación de clientes y registro de auditoría de seguridad.
 
-## Entorno
+---
 
+## Documentación Detallada (`docs/`)
+
+Para consultar las especificaciones técnicas completas y guías de arquitectura, visita la suite documental:
+
+- [**Guía de Arquitectura (`docs/ARCHITECTURE.md`)**](./docs/ARCHITECTURE.md): Diseño en capas, ciclo de vida de procesos y workers en background.
+- [**Modelo de Dominio (`docs/DOMAIN.md`)**](./docs/DOMAIN.md): Roles de usuario, flujos de invitación, bloqueo por fuerza bruta y reglas CIMA.
+- [**Contratos de API (`docs/API.md`)**](./docs/API.md): Catálogo de endpoints, KrakenD Gateway, formato de errores y JWKS.
+- [**Base de Datos y Persistencia (`docs/DATABASE.md`)**](./docs/DATABASE.md): Esquema PostgreSQL `schema_auth`, Drizzle ORM y migraciones Expand & Contract.
+- [**Seguridad y Criptografía (`docs/SECURITY.md`)**](./docs/SECURITY.md): Llaves RSA256, detección de robo de refresh tokens y cifrado de outbox.
+- [**Integraciones y Plataforma (`docs/INTEGRATIONS.md`)**](./docs/INTEGRATIONS.md): Eventos en Redis Streams, colas BullMQ y observabilidad con Prometheus/Loki.
+- [**Estrategia de Pruebas (`docs/TESTING.md`)**](./docs/TESTING.md): Pruebas unitarias Vitest, pruebas de contrato y suites Hurl E2E.
+- [**Decisiones Arquitectónicas (`docs/DECISIONS/`)**](./docs/DECISIONS/): Registros formales de decisiones (ADRs).
+
+---
+
+## Inicio Rápido Local
+
+### 1. Configuración de Entorno
 ```bash
 cp .env.example .env
-# Completar: DATABASE_URL, REDIS_URL, JWT_PRIVATE_KEY, JWT_PUBLIC_KEY, JWT_KID
+# Configurar secretos locales o ejecutar pnpm setup:env desde crm-infra
 ```
 
-| Variable | Descripción | Requerida |
-|----------|-------------|-----------|
-| `DATABASE_URL` | Conexión PostgreSQL (`schema_auth`) | ✅ |
-| `REDIS_URL` | Redis para stream de identidad y BullMQ | ✅ |
-| `JWT_PRIVATE_KEY` | Clave RSA privada para firmar JWTs | ✅ |
-| `JWT_PUBLIC_KEY` | Clave RSA pública (derivada de la privada) | ✅ |
-| `JWT_KID` | Key ID del par RSA activo | ✅ |
-| `SERVICE_VERSION` | Versión semver del servicio | ✅ |
-| `SMTP_*` | Configuración de transporte de email | Opcional |
-
-Ver [`.env.example`](./.env.example) para la lista completa.
-
-## Local
-
+### 2. Instalación y Puesta en Marcha
 ```bash
 pnpm install
-pnpm db:push             # aplicar migraciones Drizzle
-pnpm dev                 # servidor con hot-reload en :3000
+pnpm db:bootstrap             # inicializar esquema y extensiones
+pnpm db:push                  # sincronizar esquema Drizzle
+pnpm dev                      # servidor con hot-reload en http://localhost:3000
 ```
 
-Endpoints útiles:
+### 3. Workers de Background (Procesos Independientes)
+```bash
+pnpm worker:email             # envío de correos transaccionales (BullMQ)
+pnpm worker:identity-outbox   # despachador de eventos a Redis Streams
+pnpm worker:cleanup           # purga de tokens y sesiones expiradas
+```
 
-- Health: `http://localhost:3000/api/v1/health`
-- Métricas: `http://localhost:3000/api/v1/metrics`
-- JWKS: `http://localhost:3000/api/v1/.well-known/jwks.json`
-- OpenAPI: `http://localhost:3000/api/v1/openapi.yaml`
+---
 
-Workers (procesos separados):
+## Pruebas y Validación de Calidad
 
 ```bash
-pnpm worker:email            # envío de emails transaccionales (BullMQ)
-pnpm worker:identity-outbox  # publica eventos de identidad a Redis Stream
-pnpm worker:cleanup          # limpieza de tokens expirados
+pnpm test:unit                # pruebas unitarias aisladas (Vitest)
+pnpm test                     # pruebas de contrato e integración Hurl vía Gateway
+pnpm lint                     # validación estricta de estilo y linter
+pnpm typecheck                # verificación estricta de tipos TypeScript
+pnpm gateway:validate         # comprueba paridad entre OpenAPI y Gateway Manifest
 ```
 
-Utilidades:
+---
 
-```bash
-pnpm jwt:gen-keys            # generar nuevo par RSA
-pnpm db:seed                 # poblar DB con datos de prueba
-pnpm test:rate-limit         # test de límite de velocidad
-```
+## Despliegue en Producción
 
-## Deploy
+El despliegue está automatizado mediante GitHub Actions y orquestado por el script canónico de slots Blue/Green:
 
 ```bash
 # Desde crm-infra/
 ./deploy/remote/deploy-component.sh auth
 ```
-
-El script aplica migraciones, rota el slot inactivo (blue/green) y verifica health antes del cutover. Ver [crm-infra/ONBOARDING.md](../crm-infra/ONBOARDING.md).
-
-## Tests
-
-```bash
-pnpm test:unit    # unitarios Vitest (validadores Zod, lógica pura)
-pnpm test         # contrato Hurl contra gateway (requiere stack local)
-```
-
-Cobertura mínima: validadores, flujos de login/refresh/logout, contrato HTTP por endpoint público.
-
-## Contrato público
-
-- OpenAPI: [`openapi/openapi.yaml`](./openapi/openapi.yaml)
-- Gateway manifest: [`gateway/gateway.manifest.json`](./gateway/gateway.manifest.json)
-
-## Integración y despliegue seguro
-
-`crm-auth` publica identidad mediante el outbox y Redis Streams; `crm-collab` y `crm-media` consumen esos eventos y el JWKS. Cambios de identidad deben conservar ambos contratos durante una migración expand/contract.
-
-La suite `pnpm test` crea identidades bajo el dominio reservado `hurl.test`; no borra ni modifica las cuentas de desarrollo. Para validar el borde público, usar además `pnpm test:contract` con el stack de `crm-infra` levantado.
