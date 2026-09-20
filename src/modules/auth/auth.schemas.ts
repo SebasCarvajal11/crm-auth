@@ -52,6 +52,7 @@ const passwordSchema = z
 export const AcceptInviteRequestSchema = z.object({
   token: z.string().min(1),
   password: passwordSchema,
+  terms_accepted: z.boolean().optional(),
 });
 
 export const RegisterWorkerSchema = z.object({

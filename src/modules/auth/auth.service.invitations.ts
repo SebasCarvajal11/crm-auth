@@ -142,6 +142,9 @@ export const createInvitationService = (repo: InvitationRepository) => ({
 
       await tx.createAuditLog(user.id, "invitation_accepted", ip, userAgent, {
         invitation_id: invitation.id,
+        terms_accepted: data.terms_accepted ?? true,
+        terms_version: "2026-v1",
+        terms_accepted_at: new Date().toISOString(),
       });
       await tx.createIdentityOutboxEvent("user.registered", user);
 
