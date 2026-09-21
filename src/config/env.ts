@@ -139,6 +139,12 @@ const envSchema = z.object({
     RATE_LIMIT_VERIFY_EMAIL_WINDOW_MS: z.coerce.number().int().positive().default(60 * 60 * 1000),
     RATE_LIMIT_FORGOT_PASSWORD_MAX: z.coerce.number().int().positive().default(5),
     RATE_LIMIT_FORGOT_PASSWORD_WINDOW_MS: z.coerce.number().int().positive().default(60 * 60 * 1000),
+    RATE_LIMIT_RESET_PASSWORD_MAX: z.coerce.number().int().positive().default(10),
+    RATE_LIMIT_RESET_PASSWORD_WINDOW_MS: z.coerce.number().int().positive().default(60 * 60 * 1000),
+    RATE_LIMIT_REFRESH_MAX: z.coerce.number().int().positive().default(60),
+    RATE_LIMIT_REFRESH_WINDOW_MS: z.coerce.number().int().positive().default(15 * 60 * 1000),
+    RATE_LIMIT_ACCEPT_INVITE_MAX: z.coerce.number().int().positive().default(15),
+    RATE_LIMIT_ACCEPT_INVITE_WINDOW_MS: z.coerce.number().int().positive().default(60 * 60 * 1000),
   })
   .superRefine((data, ctx) => {
     const effectiveAppEnv = data.APP_ENV ?? (

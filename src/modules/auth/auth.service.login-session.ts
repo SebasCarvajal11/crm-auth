@@ -3,7 +3,7 @@ import type { LoginSessionRepository } from "./ports/auth-repositories.port";
 import type { LoginRequest } from "./auth.schemas";
 import { env } from "../../config/env";
 import { UnauthorizedError } from "../../shared/middlewares/error-handler.middleware";
-import { ACCESS_TOKEN_TTL_SECONDS, REFRESH_TOKEN_TTL_MS } from "./auth.constants";
+import { ACCESS_TOKEN_TTL_SECONDS, REFRESH_TOKEN_TTL_MS, DUMMY_BCRYPT_HASH } from "./auth.constants";
 import {
   buildAccessToken,
   generateOpaqueRefreshToken,
@@ -16,6 +16,7 @@ export const createLoginSessionService = (repo: LoginSessionRepository) => ({
     const user = await repo.findByEmail(data.email);
 
     if (!user) {
+      await compare(data.password, DUMMY_BCRYPT_HASH);
       await repo.transaction(async (txRepo) => {
         await txRepo.createAuditLog(null, "login_failed", ip, userAgent, {
           reason: "invalid_credentials_or_inactive",

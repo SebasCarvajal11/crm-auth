@@ -41,7 +41,11 @@ export const createAuthRoutes = (services: AuthServices) => {
     authController.login
   );
 
-  authRoutes.post("/refresh", authController.refresh);
+  authRoutes.post(
+    "/refresh",
+    ipRateLimit({ maxAttempts: env.RATE_LIMIT_REFRESH_MAX, windowMs: env.RATE_LIMIT_REFRESH_WINDOW_MS }),
+    authController.refresh
+  );
 
   authRoutes.post("/logout", authMiddleware, authController.logout);
 
@@ -110,6 +114,7 @@ export const createAuthRoutes = (services: AuthServices) => {
 
   authRoutes.post(
     "/accept-invite",
+    ipRateLimit({ maxAttempts: env.RATE_LIMIT_ACCEPT_INVITE_MAX, windowMs: env.RATE_LIMIT_ACCEPT_INVITE_WINDOW_MS }),
     jsonValidator(AcceptInviteRequestSchema),
     authController.acceptInvite
   );
@@ -127,6 +132,7 @@ export const createAuthRoutes = (services: AuthServices) => {
 
   authRoutes.post(
     "/reset-password",
+    ipRateLimit({ maxAttempts: env.RATE_LIMIT_RESET_PASSWORD_MAX, windowMs: env.RATE_LIMIT_RESET_PASSWORD_WINDOW_MS }),
     jsonValidator(ResetPasswordSchema),
     authController.resetPassword
   );
