@@ -14,6 +14,7 @@ Siguiendo el principio de aislamiento de microservicios, `crm-auth` opera exclus
 | :--- | :--- | :--- |
 | **`users`** | Identidades y credenciales de acceso. | `email` (UNIQUE), `subject` (UNIQUE, UUIDv7). |
 | **`refresh_tokens`** | Sesiones activas y rotación. | `user_id` (FK $\rightarrow$ users), `family` (UUID), `token_hash`. |
+| **`user_presence`** | Última señal de aplicación visible por identidad. | `user_id` PK/FK, índice `last_seen_at`; una fila por usuario. |
 | **`invitations`** | Invitaciones pendientes a clientes. | `token_hash` (UNIQUE), `email`, `expires_at`. |
 | **`password_resets`** | Solicitudes de recuperación de clave. | `token_hash` (UNIQUE), `user_id`, `expires_at`. |
 | **`email_verifications`** | Verificación de correos. | `token_hash` (UNIQUE), `user_id`. |

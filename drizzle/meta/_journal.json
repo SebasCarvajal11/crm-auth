@@ -36,6 +36,20 @@
       "when": 1780963200000,
       "tag": "0004_email_outbox",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790635021279,
+      "tag": "0005_presencia_usuarios",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790635983880,
+      "tag": "0006_indice_sesiones_activas",
+      "breakpoints": true
     }
   ]
 }

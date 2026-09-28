@@ -47,7 +47,8 @@ src/
 ├── jobs/                # Lógica de procesamiento de lotes consumida por los workers
 ├── modules/
 │   ├── auth/            # Módulo de autenticación (login, refresh, logout, password)
-│   └── users/           # Módulo de administración de usuarios y perfiles
+│   ├── users/           # Módulo de administración de usuarios y perfiles
+│   └── presence/        # Señales propias y lectura administrativa de presencia
 ├── openapi/             # Especificación OpenAPI y rutas Swagger
 ├── scripts/             # Scripts de mantenimiento y pruebas
 ├── shared/              # Utilidades compartidas, middlewares y observabilidad
@@ -59,6 +60,9 @@ src/
 ---
 
 ## 3. Procesos en Background y Workers
+
+La presencia administrativa usa persistencia acotada y señales HTTP, sin workers
+adicionales. Ver [decisión, política y contrato](PRESENCE.md).
 
 Para garantizar alta concurrencia y transacciones ACID sin bloqueos de I/O, las tareas pesadas o asíncronas se desacoplan en tres workers independientes:
 

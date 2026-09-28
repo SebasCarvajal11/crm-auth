@@ -3,6 +3,19 @@
   "version": "1.0.0",
   "endpoints": [
     {
+      "endpoint": "/api/v1/identity/presence",
+      "method": "POST",
+      "backend_url": "/api/v1/presence/heartbeat",
+      "openapi_ref": "POST /api/v1/presence/heartbeat"
+    },
+    {
+      "endpoint": "/api/v1/admin/presence",
+      "method": "GET",
+      "backend_url": "/api/v1/presence",
+      "input_query_strings": ["q", "worker_page", "client_page", "admin_page"],
+      "openapi_ref": "GET /api/v1/presence"
+    },
+    {
       "endpoint": "/api/v1/health",
       "method": "GET",
       "backend_url": "/api/v1/health",

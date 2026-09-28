@@ -103,3 +103,13 @@ export function ipRateLimit(opts: { maxAttempts: number; windowMs: number }) {
   });
 }
 
+/** Authenticated identity buckets avoid penalizing an entire office behind one IP. */
+export function identityRateLimit(opts: { maxAttempts: number; windowMs: number }) {
+  return createMiddleware<AppEnv>(async (c, next) => {
+    if (env.NODE_ENV !== "test") {
+      await checkRedisLimit(`${c.req.path}:identity:${c.get("user").userId}`, opts);
+    }
+    await next();
+  });
+}
+

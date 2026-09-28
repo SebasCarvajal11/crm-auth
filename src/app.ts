@@ -23,6 +23,10 @@ import {
 } from "@sebascarvajal11/cima-contracts/metrics";
 import { env } from "./config/env";
 import { pool } from "./db/connection";
+import { db } from "./db/connection";
+import { createPresenceRoutes } from "./modules/presence/presence.routes";
+import { createPresenceService } from "./modules/presence/presence.service";
+import { createPresenceRepository } from "./modules/presence/presence.repository";
 import { initLogger } from "./shared/logger";
 import { requestLoggerMiddleware } from "./shared/middlewares/request-logger.middleware";
 
@@ -85,6 +89,7 @@ export const createApp = () => {
 
   publicRoutes.route("/api/v1", createOpenApiRoutes());
   publicRoutes.route("/api/v1/auth", createAuthRoutes(authServices));
+  publicRoutes.route("/api/v1/presence", createPresenceRoutes(createPresenceService(createPresenceRepository(db))));
   
   app.route("/", publicRoutes);
 

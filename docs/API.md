@@ -2,6 +2,10 @@
 
 Este documento detalla la interfaz pública, los convenios de comunicación y los contratos HTTP expuestos por `crm-auth` a través del API Gateway KrakenD.
 
+La presencia incorpora `POST /api/v1/identity/presence` (señal propia) y
+`GET /api/v1/admin/presence` (solo admin activo). El contrato completo está en
+OpenAPI y la [política de presencia](PRESENCE.md).
+
 ---
 
 ## 1. Convenciones y Puertos

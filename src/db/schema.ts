@@ -11,7 +11,7 @@ import {
   index,
   serial,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { v7 as uuidv7 } from "uuid";
 import type { AuthIdentityEvent } from "@sebascarvajal11/cima-contracts/auth-identity-events";
 
@@ -50,6 +50,12 @@ export const users = authSchema.table("users", {
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });
 
+/** A single durable observation per identity, independent from credential rotation. */
+export const userPresence = authSchema.table("user_presence", {
+  userId: uuid("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  lastSeenAt: timestamp("last_seen_at", { mode: "date", withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("user_presence_last_seen_idx").on(table.lastSeenAt)]);
+
 export const refreshTokens = authSchema.table("refresh_tokens", {
   id: uuid("id").primaryKey().$defaultFn(() => uuidv7()),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
@@ -59,7 +65,7 @@ export const refreshTokens = authSchema.table("refresh_tokens", {
   expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
   isRevoked: boolean("is_revoked").default(false).notNull(),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
-});
+}, (table) => [index("refresh_tokens_live_user_expiry_idx").on(table.userId, table.expiresAt).where(sql`${table.isRevoked} = false`)]);
 
 /** Alta de cuenta cliente por email; datos comerciales/proyectos residen en crm-collab / crm-marketing. */
 export const invitations = authSchema.table("invitations", {

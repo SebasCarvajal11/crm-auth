@@ -33,6 +33,53 @@ tags:
     description: Listado y gestión de cuentas (admin)
 
 paths:
+  /api/v1/presence/heartbeat:
+    post:
+      tags: [Auth — Sesión]
+      operationId: observeOwnPresence
+      summary: Registrar únicamente la presencia de la identidad autenticada
+      description: No acepta identidades en el cuerpo. Requiere cuenta y sesión activas. Señal de aplicación visible; no prueba actividad humana. Gateway POST /api/v1/identity/presence.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Señal recibida, incluso si la escritura está limitada por frecuencia
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [heartbeat_interval_seconds]
+                    properties:
+                      heartbeat_interval_seconds: { type: integer, example: 60 }
+        '401': { description: Identidad o sesión inválida }
+  /api/v1/presence:
+    get:
+      tags: [Usuarios — Admin]
+      operationId: listUserPresence
+      summary: Consultar presencia reciente exclusivamente como administrador activo
+      description: Gateway GET /api/v1/admin/presence. Excluye al administrador solicitante y cuentas suspendidas o eliminadas. Ordena conectados primero y luego actividad descendente. Página independiente por perfil, acotada automáticamente si cambia el total. Últimos siete días. Nunca devuelve tokens, familias de sesión ni datos de dispositivos.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: query, name: q, schema: { type: string, maxLength: 120 }, description: Búsqueda literal en correo (incluido alias de usuario), nombre completo y empresa }
+        - { in: query, name: worker_page, schema: { type: integer, minimum: 1, maximum: 10000, default: 1 } }
+        - { in: query, name: client_page, schema: { type: integer, minimum: 1, maximum: 10000, default: 1 } }
+        - { in: query, name: admin_page, schema: { type: integer, minimum: 1, maximum: 10000, default: 1 } }
+      responses:
+        '200':
+          description: Snapshot con hora del servidor y diez resultados por perfil; Cache-Control no-store
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/PresenceSnapshot' }
+        '400': { description: Consulta inválida }
+        '401': { description: JWT inválido }
+        '403': { description: Rol no autorizado o administrador actualmente suspendido }
   /api/v1/health:
     get:
       tags: [Sistema]
@@ -979,3 +1026,41 @@ components:
           type: boolean
 
 
+    PresenceUser:
+      type: object
+      required: [subject, email, first_name, last_name, company_name, is_online, last_activity_at, last_connection_at]
+      properties:
+        subject: { type: string, format: uuid }
+        email: { type: string, format: email }
+        first_name: { type: string, nullable: true }
+        last_name: { type: string, nullable: true }
+        company_name: { type: string, nullable: true }
+        is_online: { type: boolean }
+        last_activity_at: { type: string, format: date-time }
+        last_connection_at: { type: string, format: date-time, nullable: true }
+    PresenceGroup:
+      type: object
+      required: [role, page, page_size, total, online, users]
+      properties:
+        role: { type: string, enum: [worker, client, admin] }
+        page: { type: integer, minimum: 1 }
+        page_size: { type: integer, example: 10 }
+        total: { type: integer, minimum: 0 }
+        online: { type: integer, minimum: 0 }
+        users:
+          type: array
+          maxItems: 10
+          items: { $ref: '#/components/schemas/PresenceUser' }
+    PresenceSnapshot:
+      type: object
+      required: [as_of, online_for_seconds, refresh_after_seconds, history_days, groups]
+      properties:
+        as_of: { type: string, format: date-time }
+        online_for_seconds: { type: integer, example: 150 }
+        refresh_after_seconds: { type: integer, example: 30 }
+        history_days: { type: integer, example: 7 }
+        groups:
+          type: array
+          minItems: 3
+          maxItems: 3
+          items: { $ref: '#/components/schemas/PresenceGroup' }

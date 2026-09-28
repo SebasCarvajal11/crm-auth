@@ -65,3 +65,27 @@ Authorization: Bearer {{worker_token}}
 HTTP 200
 [Asserts]
 jsonpath "$.data.role" == "worker"
+
+# Presencia: el colaborador comunica solo su propia actividad, sin acceso al listado.
+POST {{base_url}}/api/v1/presence/heartbeat
+Authorization: Bearer {{worker_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.data.heartbeat_interval_seconds" == 60
+
+GET {{base_url}}/api/v1/presence
+Authorization: Bearer {{worker_token}}
+HTTP 403
+
+GET {{base_url}}/api/v1/presence
+HTTP 401
+
+GET {{base_url}}/api/v1/presence?q=worker.rbac.{{TEST_SUFFIX}}
+Authorization: Bearer {{admin_token_rbac}}
+HTTP 200
+[Asserts]
+header "Cache-Control" == "no-store"
+jsonpath "$.data.groups[0].role" == "worker"
+jsonpath "$.data.groups[0].total" == 1
+jsonpath "$.data.groups[0].online" == 1
+jsonpath "$.data.groups[0].users[0].email" == "worker.rbac.{{TEST_SUFFIX}}@hurl.test"
