@@ -17,8 +17,8 @@ Siguiendo el principio de aislamiento de microservicios, `crm-auth` opera exclus
 | **`invitations`** | Invitaciones pendientes a clientes. | `token_hash` (UNIQUE), `email`, `expires_at`. |
 | **`password_resets`** | Solicitudes de recuperación de clave. | `token_hash` (UNIQUE), `user_id`, `expires_at`. |
 | **`email_verifications`** | Verificación de correos. | `token_hash` (UNIQUE), `user_id`. |
-| **`identity_outbox`** | Eventos de identidad pendientes de publicación. | `id` (Bigserial PK), `published_at` (INDEX). |
-| **`email_outbox`** | Correos pendientes de encolar en BullMQ. | `id` (Bigserial PK), `status`, `next_attempt_at`. |
+| **`identity_outbox`** | Eventos de identidad pendientes de publicación a Redis Streams. | `id` (UUIDv7 PK), `published_at`, `available_at`. |
+| **`email_outbox`** | Correos pendientes de despacho HTTP RS256 hacia `crm-media`. | `id` (UUIDv7 PK), `status`, `available_at`. |
 | **`audit_logs`** | Registro inmutable de eventos de seguridad. | **Tabla particionada por mes** sobre `timestamp`. |
 | **`schema_version`** | Registro histórico de migraciones aplicadas. | `version`, `applied_at`. |
 

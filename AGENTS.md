@@ -21,7 +21,7 @@ Antes de proponer o ejecutar cambios, consulta el documento especializado corres
 | Crear, modificar o auditar endpoints y contratos OpenAPI | [`docs/API.md`](./docs/API.md) |
 | Modificar tablas, modelos Drizzle o ejecutar migraciones sin downtime | [`docs/DATABASE.md`](./docs/DATABASE.md) |
 | Ajustar criptografía RSA256, JWKS, refresh tokens o rate-limits | [`docs/SECURITY.md`](./docs/SECURITY.md) |
-| Conectar con Redis Streams (`stream:auth.identity`), BullMQ o KrakenD | [`docs/INTEGRATIONS.md`](./docs/INTEGRATIONS.md) |
+| Conectar con Redis Streams (`stream:auth.identity`), despacho outbox a Media o KrakenD | [`docs/INTEGRATIONS.md`](./docs/INTEGRATIONS.md) |
 | Escribir o ejecutar pruebas unitarias, de contrato o suites Hurl | [`docs/TESTING.md`](./docs/TESTING.md) |
 | Entender el porqué de las decisiones técnicas estructurales (ADRs) | [`docs/DECISIONS/`](./docs/DECISIONS/) |
 

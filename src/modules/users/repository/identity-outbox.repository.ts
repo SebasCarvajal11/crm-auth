@@ -38,6 +38,25 @@ export const createIdentityOutboxRepository = (conn: DbOrTx) => ({
     });
   },
 
+  createIdentityOutboxEventsBatch: async (
+    events: Array<{ type: AuthIdentityEventType; user: AuthIdentityProjection }>
+  ) => {
+    if (events.length === 0) return;
+    const store = traceStorage.getStore();
+    const rows = events.map(({ type, user }) => {
+      const event = toAuthIdentityEvent(type, user);
+      if (store?.traceId) {
+        event.traceId = store.traceId;
+      }
+      return {
+        eventType: event.type,
+        aggregateId: event.userSub,
+        payload: event,
+      };
+    });
+    await conn.insert(identityOutbox).values(rows);
+  },
+
   listPendingIdentityOutboxEvents: async (limit: number, now = new Date()) => {
     return conn
       .select()

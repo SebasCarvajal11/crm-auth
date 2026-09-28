@@ -119,28 +119,28 @@ async function readLoop(redis: any, streamKey: string, groupName: string): Promi
   }
 }
 
-async function triggerIdentityReplay(): Promise<void> {
+export async function triggerIdentityReplay(): Promise<void> {
   const repo = createUsersRepository();
-  // Obtener todos los usuarios activos
-  const { rows: users } = await repo.listUsersPaginated({
-    page: 1,
-    limit: 100000,
-    includeDeleted: false,
-  });
+  const BATCH_SIZE = 500;
+  let page = 1;
+  let totalReplayed = 0;
 
-  if (!users.length) {
-    logger.info("[replay-request-listener] No active users to replay");
-    return;
-  }
+  logger.info("[replay-request-listener] Starting batched identity replay (batch size 500)...");
 
-  logger.info(
-    { count: users.length },
-    "[replay-request-listener] Writing replay events to identity_outbox"
-  );
+  while (true) {
+    const { rows: users } = await repo.listUsersPaginated({
+      page,
+      limit: BATCH_SIZE,
+      includeDeleted: false,
+    });
 
-  await repo.transaction(async (tx) => {
-    for (const user of users) {
-      await tx.createIdentityOutboxEvent("user.registered", {
+    if (!users.length) {
+      break;
+    }
+
+    const eventsToInsert = users.map((user) => ({
+      type: "user.registered" as const,
+      user: {
         subject: user.subject,
         email: user.email,
         role: user.role,
@@ -149,9 +149,31 @@ async function triggerIdentityReplay(): Promise<void> {
         clientKind: user.clientKind,
         companyName: user.companyName,
         profession: user.profession,
-      });
-    }
-  });
+      },
+    }));
 
-  logger.info("[replay-request-listener] Replay outbox events created successfully");
+    await repo.transaction(async (tx) => {
+      await tx.createIdentityOutboxEventsBatch(eventsToInsert);
+    });
+
+    totalReplayed += users.length;
+    logger.info(
+      { batch: page, count: users.length, totalReplayed },
+      "[replay-request-listener] Batched identity replay outbox events written"
+    );
+
+    if (users.length < BATCH_SIZE) {
+      break;
+    }
+    page++;
+  }
+
+  if (totalReplayed === 0) {
+    logger.info("[replay-request-listener] No active users to replay");
+  } else {
+    logger.info(
+      { totalReplayed },
+      "[replay-request-listener] Replay outbox events created successfully"
+    );
+  }
 }

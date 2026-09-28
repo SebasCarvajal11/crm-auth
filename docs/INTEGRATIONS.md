@@ -39,12 +39,17 @@ Este documento define la interacción de `crm-auth` con los demás componentes d
 
 Cualquier mutación en la identidad de un usuario se publica en Redis Streams para sincronizar las vistas desnormalizadas de los microservicios aguas abajo:
 
-- **Nombre del Stream**: `stream:auth.identity`
-- **Contrato de Eventos**: Definido formalmente en `@sebascarvajal11/cima-contracts/auth-identity-events`.
+- **Nombre del Stream Principal**: `stream:auth.identity`
+- **Contrato de Eventos**: Definido formalmente en `@sebascarvajal11/cima-contracts` (`auth-identity-events.ts`).
 - **Tipos de Eventos Publicados**:
-  - `auth.user.created`: Alta de nuevo usuario (worker o cliente que aceptó invitación).
-  - `auth.user.updated`: Cambio de nombre, rol, estado de activación o teléfono.
-  - `auth.user.deleted`: Baja lógica de usuario.
+  - `user.registered`: Alta de nuevo usuario (worker o cliente que completó registro).
+  - `user.updated`: Modificación de datos de perfil, rol o estado.
+  - `user.deleted`: Baja lógica de usuario.
+- **Grupos de Consumidores Downstream**:
+  - `group:collab.auth-identity` (en `crm-collab` para sincronizar colaboradores y clientes en proyectos).
+  - `group:crm-media.auth.identity` (en `crm-media` para sincronizar propietarios de avatares).
+- **Stream de Replay de Identidades**: `stream:auth.identity-replay-requests`
+  - **Consumer Group**: `group:auth.identity-replay-requests` (procesado por `crm-auth` para rehidratar proyecciones).
 - **Mecanismo de Despacho**: Gestionado por el `identity-outbox-worker` para garantizar semántica *at-least-once* sin pérdida de eventos por caídas de red.
 
 ---

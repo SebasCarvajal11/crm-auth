@@ -24,7 +24,7 @@ Para consultar las especificaciones técnicas completas y guías de arquitectura
 - [**Contratos de API (`docs/API.md`)**](./docs/API.md): Catálogo de endpoints, KrakenD Gateway, formato de errores y JWKS.
 - [**Base de Datos y Persistencia (`docs/DATABASE.md`)**](./docs/DATABASE.md): Esquema PostgreSQL `schema_auth`, Drizzle ORM y migraciones Expand & Contract.
 - [**Seguridad y Criptografía (`docs/SECURITY.md`)**](./docs/SECURITY.md): Llaves RSA256, detección de robo de refresh tokens y cifrado de outbox.
-- [**Integraciones y Plataforma (`docs/INTEGRATIONS.md`)**](./docs/INTEGRATIONS.md): Eventos en Redis Streams, colas BullMQ y observabilidad con Prometheus/Loki.
+- [**Integraciones y Plataforma (`docs/INTEGRATIONS.md`)**](./docs/INTEGRATIONS.md): Eventos en Redis Streams, despacho de correo hacia `crm-media` y observabilidad con Prometheus/Loki.
 - [**Estrategia de Pruebas (`docs/TESTING.md`)**](./docs/TESTING.md): Pruebas unitarias Vitest, pruebas de contrato y suites Hurl E2E.
 - [**Decisiones Arquitectónicas (`docs/DECISIONS/`)**](./docs/DECISIONS/): Registros formales de decisiones (ADRs).
 
@@ -48,8 +48,8 @@ pnpm dev                      # servidor con hot-reload en http://localhost:3000
 
 ### 3. Workers de Background (Procesos Independientes)
 ```bash
-pnpm worker:email             # envío de correos transaccionales (BullMQ)
-pnpm worker:identity-outbox   # despachador de eventos a Redis Streams
+pnpm worker:email-outbox      # despachador de correos hacia crm-media vía HTTP RS256
+pnpm worker:identity-outbox   # despachador de eventos a Redis Streams (stream:auth.identity)
 pnpm worker:cleanup           # purga de tokens y sesiones expiradas
 ```
 
@@ -60,8 +60,7 @@ pnpm worker:cleanup           # purga de tokens y sesiones expiradas
 ```bash
 pnpm test:unit                # pruebas unitarias aisladas (Vitest)
 pnpm test                     # pruebas de contrato e integración Hurl vía Gateway
-pnpm lint                     # validación estricta de estilo y linter
-pnpm typecheck                # verificación estricta de tipos TypeScript
+pnpm openapi:check            # validación de coherencia de especificación OpenAPI
 pnpm gateway:validate         # comprueba paridad entre OpenAPI y Gateway Manifest
 ```
 

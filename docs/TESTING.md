@@ -48,11 +48,10 @@ Para evitar la corrupción o interferencia con las cuentas de desarrollo y demos
 
 | Comando | Propósito | Entorno Requerido |
 | :--- | :--- | :--- |
-| `pnpm test:unit` | Ejecuta la suite de pruebas unitarias. | Ninguno (autocontenido) |
-| `pnpm test:unit:coverage` | Genera reporte de cobertura de código. | Ninguno |
+| `pnpm test:unit` | Ejecuta la suite de pruebas unitarias con Vitest. | Ninguno (autocontenido) |
+| `pnpm test:contract` | Ejecuta pruebas Hurl específicas de contrato contra el Gateway. | Docker stack activo |
 | `pnpm test` | Ejecuta la suite completa de contratos Hurl. | Docker stack activo |
 | `pnpm test:rate-limit` | Verifica las políticas de límite de velocidad. | Docker stack activo |
 | `pnpm openapi:check` | Valida la sintaxis del archivo `openapi.yaml`. | Ninguno |
 | `pnpm gateway:validate` | Verifica consistencia entre OpenAPI y Gateway Manifest. | Ninguno |
-| `pnpm lint` | Analiza cumplimiento de reglas ESLint. | Ninguno |
-| `pnpm typecheck` | Comprueba tipos TypeScript sin emitir código. | Ninguno |
+| `pnpm build` | Comprueba tipos (`tsc`) y compila artefactos. | Ninguno |

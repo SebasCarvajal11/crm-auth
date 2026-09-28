@@ -26,7 +26,7 @@ export const buildAccessToken = (
     exp: now + ACCESS_TOKEN_TTL_SECONDS,
   };
   if (forcePasswordChange) claims.force_password_change = true;
-  if (env.JWT_ISS) claims.iss = env.JWT_ISS;
+  claims.iss = env.JWT_ISS || "cima-crm";
   return signRs256Jwt(claims, normalizePem(env.JWT_PRIVATE_KEY), env.JWT_KID);
 };
 

@@ -30,8 +30,8 @@ const envSchema = z.object({
   ),
   /** Identificador de clave en header JWT y en JWKS (rotación de llaves). */
   JWT_KID: z.string().min(1).default("mod-auth-rsa-1"),
-  /** Opcional: issuer claim; el gateway puede exigir coincidencia en producción. */
-  JWT_ISS: z.string().min(1).optional(),
+  /** Emisor canonico de tokens JWT (ADR-002). */
+  JWT_ISS: z.string().min(1).default("cima-crm"),
   /** Redis opcional: requerido en producción para rate limiting distribuido y publicación de eventos. */
   REDIS_URL: z.string().url().optional(),
   /** Costo de hashing para bcrypt. */

@@ -29,4 +29,28 @@ describe("auth.token-utils", () => {
       expect(hash).toBe("4c5dc9b7708905f77f5e5d16316b5dfb425e68cb326dcd55a860e90a7707031e");
     });
   });
+
+  describe("buildAccessToken", () => {
+    it("should issue a JWT with canonical iss 'cima-crm' and valid claims", async () => {
+      const { buildAccessToken } = await import("./auth.token-utils");
+      const token = buildAccessToken(
+        "user-sub-123",
+        "user-id-456",
+        "admin",
+        "admin@cima.com.co"
+      );
+
+      expect(token).toBeTypeOf("string");
+      const parts = token.split(".");
+      expect(parts).toHaveLength(3);
+
+      const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf-8"));
+      expect(payload.iss).toBe("cima-crm");
+      expect(payload.sub).toBe("user-sub-123");
+      expect(payload.userId).toBe("user-id-456");
+      expect(payload.role).toBe("admin");
+      expect(payload.email).toBe("admin@cima.com.co");
+      expect(payload.exp).toBeGreaterThan(payload.iat);
+    });
+  });
 });
