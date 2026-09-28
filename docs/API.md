@@ -32,7 +32,7 @@ Este documento detalla la interfaz pública, los convenios de comunicación y lo
 ### A. Access Token (JWT Bearer)
 - Se envía en el encabezado: `Authorization: Bearer <access_token>`.
 - Token RS256 de corta duración (típicamente 15 a 60 minutos).
-- Contiene los claims: `sub` (UUID del usuario), `userId`, `email`, `role`, `exp`, `iat`.
+- Contiene los claims canónicos: `iss` (`cima-crm`), `sub` (UUID del usuario), `userId`, `email`, `role`, `exp`, `iat`.
 
 ### B. Refresh Token (Cookie Segura HttpOnly)
 - Se transporta automáticamente como cookie: `refresh_token`.
