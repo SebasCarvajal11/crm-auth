@@ -55,7 +55,7 @@ export const createPresenceRepository = (conn: DbOrTx): PresenceRepository => ({
           coalesce(t.total, 0) AS total, coalesce(t.online, 0) AS online
         FROM roles r LEFT JOIN totals t USING (role)
       ) SELECT jsonb_build_object('as_of', now(), 'groups', (
-        SELECT jsonb_agg(jsonb_build_object('role', p.role, 'page', p.page, 'page_size', ${PRESENCE_POLICY.pageSize},
+        SELECT jsonb_agg(jsonb_build_object('role', p.role, 'page', p.page, 'page_size', ${PRESENCE_POLICY.pageSize}::int,
           'total', p.total, 'online', p.online, 'users', coalesce((
             SELECT jsonb_agg(to_jsonb(r) - 'position' - 'role' ORDER BY r.position)
             FROM ranked r WHERE r.role = p.role AND r.position > (p.page - 1) * ${PRESENCE_POLICY.pageSize}
