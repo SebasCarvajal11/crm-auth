@@ -37,7 +37,9 @@ export const createPresenceRepository = (conn: DbOrTx): PresenceRepository => ({
         VALUES ('worker', ${query.worker_page}::int), ('client', ${query.client_page}::int), ('admin', ${query.admin_page}::int)
       ), candidates AS (
         SELECT u.role::text AS role, u.subject, u.email, u.first_name, u.last_name, u.company_name,
-          u.last_login_at AS last_connection_at, p.last_seen_at AS last_activity_at,
+          -- Login writes UTC instants to a legacy timestamp without time zone.
+          -- Attach UTC before JSON serialization so clients receive an unambiguous ISO instant.
+          (u.last_login_at AT TIME ZONE 'UTC') AS last_connection_at, p.last_seen_at AS last_activity_at,
           (p.last_seen_at > now() - ${PRESENCE_POLICY.onlineSeconds} * interval '1 second'
             AND EXISTS (SELECT 1 FROM schema_auth.refresh_tokens r
               WHERE r.user_id = u.id AND NOT r.is_revoked AND r.expires_at > now())) AS is_online

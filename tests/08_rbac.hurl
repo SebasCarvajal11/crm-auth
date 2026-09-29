@@ -89,3 +89,6 @@ jsonpath "$.data.groups[0].role" == "worker"
 jsonpath "$.data.groups[0].total" == 1
 jsonpath "$.data.groups[0].online" == 1
 jsonpath "$.data.groups[0].users[0].email" == "worker.rbac.{{TEST_SUFFIX}}@hurl.test"
+jsonpath "$.data.as_of" matches "(Z|[+-][0-9]{2}:[0-9]{2})$"
+jsonpath "$.data.groups[0].users[0].last_activity_at" matches "(Z|[+-][0-9]{2}:[0-9]{2})$"
+jsonpath "$.data.groups[0].users[0].last_connection_at" matches "(Z|[+-][0-9]{2}:[0-9]{2})$"

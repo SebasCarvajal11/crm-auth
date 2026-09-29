@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { Pool, type PoolClient } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
+import { z } from "zod";
 import * as schema from "../../src/db/schema";
 import { createPresenceRepository } from "../../src/modules/presence/presence.repository";
 import { PresenceQuerySchema } from "../../src/modules/presence/presence.schemas";
@@ -27,8 +28,8 @@ describe("presence repository against PostgreSQL", () => {
     tag = `presence-${randomUUID()}`;
     const create = async (role: "admin" | "worker" | "client", n: number, seconds: number, active = true) => {
       const id = randomUUID();
-      await client.query(`INSERT INTO schema_auth.users (id, subject, email, password_hash, role, first_name, last_name, company_name, is_active)
-        VALUES ($1, $2, $3, 'unused-test-hash', $4, 'Ana María', 'Pérez', $5, $6)`, [id, randomUUID(), `${tag}-${n}@hurl.test`, role, tag, active]);
+      await client.query(`INSERT INTO schema_auth.users (id, subject, email, password_hash, role, first_name, last_name, company_name, is_active, last_login_at)
+        VALUES ($1, $2, $3, 'unused-test-hash', $4, 'Ana María', 'Pérez', $5, $6, timestamp '2026-09-28 12:34:56.123456')`, [id, randomUUID(), `${tag}-${n}@hurl.test`, role, tag, active]);
       await client.query("INSERT INTO schema_auth.user_presence (user_id, last_seen_at) VALUES ($1, now() - $2 * interval '1 second')", [id, seconds]);
       await client.query("INSERT INTO schema_auth.refresh_tokens (id, user_id, token_hash, family, expires_at) VALUES ($1, $2, $3, $4, now() + interval '1 day')", [randomUUID(), id, randomUUID(), randomUUID()]);
       return id;
@@ -43,6 +44,24 @@ describe("presence repository against PostgreSQL", () => {
   });
   afterEach(async () => { await client.query("ROLLBACK"); client.release(); });
   afterAll(async () => { await pool.end(); });
+
+  it.each(["UTC", "America/Bogota", "Asia/Kolkata"])("returns unambiguous ISO timestamps preserving the UTC login instant in %s", async (timezone) => {
+    await client.query("SELECT set_config('TimeZone', $1, true)", [timezone]);
+    const snapshot = await repository.list(query(), requesterId);
+    const datetime = z.iso.datetime({ offset: true });
+    expect(datetime.safeParse(snapshot.as_of).success).toBe(true);
+    for (const user of snapshot.groups.flatMap((group) => group.users)) {
+      expect(datetime.safeParse(user.last_activity_at).success).toBe(true);
+      expect(datetime.safeParse(user.last_connection_at).success).toBe(true);
+      expect(new Date(user.last_connection_at!).toISOString()).toBe("2026-09-28T12:34:56.123Z");
+    }
+  });
+  it("preserves a missing login timestamp as null", async () => {
+    await client.query("UPDATE schema_auth.users SET last_login_at = NULL WHERE id = $1", [workerId]);
+    const { rows } = await client.query("SELECT subject FROM schema_auth.users WHERE id = $1", [workerId]);
+    const snapshot = await repository.list(query(), requesterId);
+    expect(snapshot.groups[0].users.find((user) => user.subject === rows[0].subject)?.last_connection_at).toBeNull();
+  });
 
   it("bounds each profile independently, orders online first and excludes self/inactive/old observations", async () => {
     const snapshot = await repository.list(query(), requesterId);

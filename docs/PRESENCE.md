@@ -45,6 +45,24 @@ validado y acotado al último número disponible cuando cambia el total.
 Los conectados aparecen primero y las desconexiones recientes conservan la
 marca real de última actividad; no se inventa una fecha de desconexión exacta.
 
+## Contrato temporal (2026-09-29)
+
+Todas las fechas de la respuesta son instantes ISO 8601 con zona horaria explícita.
+`users.last_login_at` conserva el esquema histórico `timestamp without time zone`,
+pero `markSuccessfulLogin` escribe instantes UTC. La consulta de presencia aplica
+`AT TIME ZONE 'UTC'` antes de construir el JSON, conservando ese instante incluso
+cuando la sesión PostgreSQL usa otra zona; los valores nulos siguen siendo nulos.
+Así se evita que un login real invalide el listado en el frontend o que Safari
+interprete una fecha ambigua en la zona local del dispositivo.
+
+Se evaluaron aceptar fechas ambiguas en el cliente, migrar la columna compartida
+y convertirlas en el adaptador SQL. Se eligió la conversión en el repositorio:
+respeta el contrato existente, mantiene la validación estricta del cliente y evita
+una migración transversal innecesaria para corregir esta lectura.
+Las pruebas de PostgreSQL usan logins no nulos y validan el formato y el instante
+en UTC, Bogotá y Kolkata, además del caso nulo. Hurl verifica las tres fechas
+del listado después del login y heartbeat reales de un colaborador `@hurl.test`.
+
 ## Migraciones y validación
 
 0005 añade presencia y 0006 el índice de sesiones: cambios expand compatibles
