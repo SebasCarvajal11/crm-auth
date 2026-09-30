@@ -38,8 +38,14 @@ const envSchema = z.object({
   BCRYPT_ROUNDS: z.coerce.number().int().min(4).max(31).default(12),
   /** TTL del Access Token en segundos (para firmas JWT). */
   ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(28800),
-  /** TTL del Refresh Token en milisegundos (para cookies/sesiones). */
+  /** TTL del Refresh Token en milisegundos (para cookies/sesiones persistentes). */
   REFRESH_TOKEN_TTL_MS: z.coerce.number().int().positive().default(604800000),
+  /** TTL de refresh token para sesiones no persistentes (sin recuérdame). Por defecto 24 horas. */
+  REFRESH_TOKEN_SESSION_TTL_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(24 * 60 * 60 * 1000),
   /** TTL de códigos de restablecimiento de contraseña en milisegundos. */
   PASSWORD_RESET_TTL_MS: z.coerce.number().int().positive().default(3600000),
   /** TTL de enlaces de verificación de email en milisegundos. */
@@ -72,6 +78,13 @@ const envSchema = z.object({
    * (SPA con prefijo /api/v1: /api/v1/auth/refresh).
    */
   REFRESH_COOKIE_PATH: z.string().min(1).default("/api/v1/auth/refresh"),
+  /** Flag explícito para cookie Secure. Si no se provee, se infiere según APP_ENV y transporte. */
+  REFRESH_COOKIE_SECURE: z
+    .preprocess(
+      (v) => (v === "" || v === undefined ? undefined : String(v).toLowerCase()),
+      z.union([z.literal("true"), z.literal("false"), z.literal("1"), z.literal("0")]).optional()
+    )
+    .transform((v) => (v !== undefined ? v === "true" || v === "1" : undefined)),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   /** Contexto de despliegue; conserva las garantías de seguridad aunque el runtime use NODE_ENV=production. */
   APP_ENV: z.enum(["development", "staging", "production", "test"]).optional(),

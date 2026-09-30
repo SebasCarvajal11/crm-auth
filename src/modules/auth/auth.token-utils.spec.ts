@@ -53,4 +53,62 @@ describe("auth.token-utils", () => {
       expect(payload.exp).toBeGreaterThan(payload.iat);
     });
   });
+
+  describe("issueTokenPair", () => {
+    it("should issue token pair with persistent flag and 7-day TTL", async () => {
+      const { issueTokenPair } = await import("./auth.token-utils");
+      let savedData: any = null;
+      const mockRepo = {
+        saveRefreshToken: async (data: any) => {
+          savedData = data;
+          return {} as any;
+        },
+      };
+
+      const result = await issueTokenPair(mockRepo, {
+        userId: "user-1",
+        subject: "sub-1",
+        role: "admin",
+        email: "admin@cima.co",
+        userAgent: "TestAgent",
+        isPersistent: true,
+      });
+
+      expect(result.isPersistent).toBe(true);
+      expect(result.accessToken).toBeTypeOf("string");
+      expect(result.rawRefreshToken).toHaveLength(80);
+      expect(savedData.isPersistent).toBe(true);
+      // Persistent should expire around 7 days in the future
+      const diffDays = (savedData.expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+      expect(diffDays).toBeGreaterThan(6.9);
+      expect(diffDays).toBeLessThanOrEqual(7.1);
+    });
+
+    it("should issue token pair with non-persistent flag and 24-hour TTL", async () => {
+      const { issueTokenPair } = await import("./auth.token-utils");
+      let savedData: any = null;
+      const mockRepo = {
+        saveRefreshToken: async (data: any) => {
+          savedData = data;
+          return {} as any;
+        },
+      };
+
+      const result = await issueTokenPair(mockRepo, {
+        userId: "user-2",
+        subject: "sub-2",
+        role: "worker",
+        email: "worker@cima.co",
+        userAgent: "TestAgent",
+        isPersistent: false,
+      });
+
+      expect(result.isPersistent).toBe(false);
+      expect(savedData.isPersistent).toBe(false);
+      // Non-persistent should expire around 1 day (24h) in the future
+      const diffHours = (savedData.expiresAt.getTime() - Date.now()) / (1000 * 60 * 60);
+      expect(diffHours).toBeGreaterThan(23.9);
+      expect(diffHours).toBeLessThanOrEqual(24.1);
+    });
+  });
 });

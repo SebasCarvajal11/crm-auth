@@ -63,6 +63,7 @@ export const refreshTokens = authSchema.table("refresh_tokens", {
   family: uuid("family").notNull(),
   deviceInfo: varchar("device_info", { length: 255 }),
   expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
+  isPersistent: boolean("is_persistent").default(false).notNull(),
   isRevoked: boolean("is_revoked").default(false).notNull(),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
 }, (table) => [index("refresh_tokens_live_user_expiry_idx").on(table.userId, table.expiresAt).where(sql`${table.isRevoked} = false`)]);

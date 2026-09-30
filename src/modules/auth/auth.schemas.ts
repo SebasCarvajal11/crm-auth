@@ -6,15 +6,23 @@ const ClientKindEnum = z.enum(["natural", "juridical"]);
 const nameField = z.string().trim().min(1).max(120);
 const professionField = z.string().trim().min(1).max(160);
 
-export const LoginRequestSchema = z.object({
-  email: z
-    .string()
-    .email({ message: "Correo no valido" })
-    .max(255, { message: "El correo es demasiado largo" }),
-  password: z
-    .string()
-    .min(8, { message: "La contrasena debe tener al menos 8 caracteres" }),
-});
+export const LoginRequestSchema = z
+  .object({
+    email: z
+      .string()
+      .email({ message: "Correo no valido" })
+      .max(255, { message: "El correo es demasiado largo" }),
+    password: z
+      .string()
+      .min(8, { message: "La contrasena debe tener al menos 8 caracteres" }),
+    remember_me: z.boolean().optional().default(false),
+    rememberMe: z.boolean().optional(),
+  })
+  .transform((data) => ({
+    email: data.email,
+    password: data.password,
+    remember_me: data.rememberMe !== undefined ? data.rememberMe : data.remember_me,
+  }));
 
 export const InviteClientRequestSchema = z
   .object({

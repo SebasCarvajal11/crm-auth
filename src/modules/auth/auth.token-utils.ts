@@ -2,7 +2,11 @@ import { randomBytes, createHash, randomUUID } from "crypto";
 import type { RefreshTokenWriter } from "./ports/auth-repositories.port";
 import { env } from "../../config/env";
 import { normalizePem, signRs256Jwt } from "../../config/jwt";
-import { ACCESS_TOKEN_TTL_SECONDS, REFRESH_TOKEN_TTL_MS } from "./auth.constants";
+import {
+  ACCESS_TOKEN_TTL_SECONDS,
+  REFRESH_TOKEN_TTL_MS,
+  REFRESH_TOKEN_SESSION_TTL_MS,
+} from "./auth.constants";
 
 export const generateOpaqueRefreshToken = () => randomBytes(40).toString("hex");
 
@@ -37,6 +41,7 @@ export interface IssueTokenPairOptions {
   email: string;
   userAgent: string;
   forcePasswordChange?: boolean;
+  isPersistent?: boolean;
 }
 
 export const issueTokenPair = async (
@@ -54,7 +59,9 @@ export const issueTokenPair = async (
   const rawRefreshToken = generateOpaqueRefreshToken();
   const refreshTokenHash = hashRefreshToken(rawRefreshToken);
   const familyId = randomUUID();
-  const expiresAt = new Date(Date.now() + REFRESH_TOKEN_TTL_MS);
+  const isPersistent = opts.isPersistent ?? false;
+  const ttlMs = isPersistent ? REFRESH_TOKEN_TTL_MS : REFRESH_TOKEN_SESSION_TTL_MS;
+  const expiresAt = new Date(Date.now() + ttlMs);
 
   await repo.saveRefreshToken({
     userId: opts.userId,
@@ -62,8 +69,9 @@ export const issueTokenPair = async (
     family: familyId,
     expiresAt,
     deviceInfo: opts.userAgent,
+    isPersistent,
   });
 
-  return { accessToken, rawRefreshToken };
+  return { accessToken, rawRefreshToken, isPersistent };
 };
 

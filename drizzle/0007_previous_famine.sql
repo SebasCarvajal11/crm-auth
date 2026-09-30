@@ -1,0 +1,1 @@
+ALTER TABLE "schema_auth"."refresh_tokens" ADD COLUMN "is_persistent" boolean DEFAULT false NOT NULL;

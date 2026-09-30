@@ -3,7 +3,12 @@ import type { LoginSessionRepository } from "./ports/auth-repositories.port";
 import type { LoginRequest } from "./auth.schemas";
 import { env } from "../../config/env";
 import { UnauthorizedError } from "../../shared/middlewares/error-handler.middleware";
-import { ACCESS_TOKEN_TTL_SECONDS, REFRESH_TOKEN_TTL_MS, DUMMY_BCRYPT_HASH } from "./auth.constants";
+import {
+  ACCESS_TOKEN_TTL_SECONDS,
+  REFRESH_TOKEN_TTL_MS,
+  REFRESH_TOKEN_SESSION_TTL_MS,
+  DUMMY_BCRYPT_HASH,
+} from "./auth.constants";
 import {
   buildAccessToken,
   generateOpaqueRefreshToken,
@@ -74,6 +79,7 @@ export const createLoginSessionService = (repo: LoginSessionRepository) => ({
     const authResult = await repo.transaction(async (txRepo) => {
       await txRepo.markSuccessfulLogin(user.id);
 
+      const isPersistent = Boolean(data.remember_me);
       const { accessToken, rawRefreshToken } = await issueTokenPair(txRepo, {
         userId: user.id,
         subject: user.subject,
@@ -81,13 +87,17 @@ export const createLoginSessionService = (repo: LoginSessionRepository) => ({
         email: user.email,
         userAgent,
         forcePasswordChange: user.forcePasswordChange,
+        isPersistent,
       });
 
-      await txRepo.createAuditLog(user.id, "login_success", ip, userAgent);
+      await txRepo.createAuditLog(user.id, "login_success", ip, userAgent, {
+        remember_me: isPersistent,
+      });
 
       return {
         access_token: accessToken,
         refresh_token: rawRefreshToken,
+        is_persistent: isPersistent,
         expires_in: ACCESS_TOKEN_TTL_SECONDS,
         user: {
           id: user.subject,
@@ -144,15 +154,23 @@ export const createLoginSessionService = (repo: LoginSessionRepository) => ({
       const newRawRefreshToken = generateOpaqueRefreshToken();
       const newRefreshTokenHash = hashRefreshToken(newRawRefreshToken);
 
+      const isPersistent = Boolean(tokenRecord.isPersistent);
+      const ttlMs = isPersistent ? REFRESH_TOKEN_TTL_MS : REFRESH_TOKEN_SESSION_TTL_MS;
+
       await txRepo.saveRefreshToken({
         userId: user.id,
         tokenHash: newRefreshTokenHash,
         family: tokenRecord.family,
-        expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
+        expiresAt: new Date(Date.now() + ttlMs),
         deviceInfo: userAgent,
+        isPersistent,
       });
 
-      return { access_token: newAccessToken, refresh_token: newRawRefreshToken };
+      return {
+        access_token: newAccessToken,
+        refresh_token: newRawRefreshToken,
+        is_persistent: isPersistent,
+      };
     });
 
     return result;

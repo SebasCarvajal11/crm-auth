@@ -802,6 +802,10 @@ components:
         password:
           type: string
           minLength: 8
+        remember_me:
+          type: boolean
+          default: false
+          description: Si es true, emite cookie persistente. Si es false, cookie de sesion transitoria.
 
     LoginSuccessData:
       type: object

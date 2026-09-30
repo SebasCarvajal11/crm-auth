@@ -3,15 +3,34 @@ import type { Context } from "hono";
 import { env } from "../../config/env";
 
 export const REFRESH_COOKIE_PATH = env.REFRESH_COOKIE_PATH;
-export const REFRESH_COOKIE_MAX_AGE = 7 * 24 * 60 * 60;
+export const REFRESH_COOKIE_MAX_AGE = Math.floor(env.REFRESH_TOKEN_TTL_MS / 1000);
 
-export const setRefreshCookie = (c: Context, token: string) => {
+export const isSecureCookie = (_c?: Context): boolean => {
+  if (env.REFRESH_COOKIE_SECURE !== undefined) {
+    return env.REFRESH_COOKIE_SECURE;
+  }
+  if (env.APP_ENV === "staging" && env.APP_PUBLIC_URL.startsWith("http://")) {
+    return false;
+  }
+  return process.env.NODE_ENV === "production";
+};
+
+export interface SetRefreshCookieOptions {
+  isPersistent?: boolean;
+}
+
+export const setRefreshCookie = (
+  c: Context,
+  token: string,
+  options?: SetRefreshCookieOptions
+) => {
+  const isPersistent = options?.isPersistent ?? false;
   setCookie(c, "refresh_token", token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: isSecureCookie(c),
     sameSite: "Lax",
     path: REFRESH_COOKIE_PATH,
-    maxAge: REFRESH_COOKIE_MAX_AGE,
+    ...(isPersistent ? { maxAge: REFRESH_COOKIE_MAX_AGE } : {}),
   });
 };
 

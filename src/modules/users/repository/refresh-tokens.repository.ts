@@ -6,7 +6,7 @@ export const createRefreshTokensRepository = (conn: DbOrTx) => ({
   saveRefreshToken: async (
     data: Pick<
       NonNullable<typeof refreshTokens.$inferInsert>,
-      "userId" | "tokenHash" | "family" | "expiresAt" | "deviceInfo"
+      "userId" | "tokenHash" | "family" | "expiresAt" | "deviceInfo" | "isPersistent"
     >
   ) => {
     const [token] = await conn.insert(refreshTokens).values(data).returning();

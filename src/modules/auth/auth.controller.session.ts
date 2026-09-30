@@ -31,7 +31,7 @@ export const createSessionControllerHandlers = (
     const data = validatedJson<LoginRequest>(c);
     const result = await loginSessionService.login(data, getIp(c), getUa(c));
 
-    setRefreshCookie(c, result.refresh_token);
+    setRefreshCookie(c, result.refresh_token, { isPersistent: result.is_persistent });
 
     return c.json(
       {
@@ -51,7 +51,7 @@ export const createSessionControllerHandlers = (
 
     const result = await loginSessionService.refreshSession(rawRefreshToken, getIp(c), getUa(c));
 
-    setRefreshCookie(c, result.refresh_token);
+    setRefreshCookie(c, result.refresh_token, { isPersistent: result.is_persistent });
 
     return c.json({ data: { access_token: result.access_token } }, 200);
   },
