@@ -6,6 +6,10 @@ import {
   UnauthorizedError,
   ForbiddenError,
 } from "./error-handler.middleware";
+import {
+  isTokenRevoked,
+  isUserRevoked,
+} from "@sebascarvajal11/cima-contracts/token-blocklist";
 
 export interface JwtPayload {
   sub: string;
@@ -45,9 +49,23 @@ export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
       key,
       env.JWT_ISS ? { alg: "RS256", iss: env.JWT_ISS } : "RS256"
     )) as unknown as JwtPayload;
+
+    const revoked = await isTokenRevoked(token);
+    if (revoked) {
+      throw new UnauthorizedError("Token revocado o sesión finalizada");
+    }
+
+    if (payload.userId && payload.iat) {
+      const userRevoked = await isUserRevoked(payload.userId, payload.iat);
+      if (userRevoked) {
+        throw new UnauthorizedError("Sesión revocada para este usuario");
+      }
+    }
+
     c.set("user", payload);
     await next();
-  } catch {
+  } catch (err) {
+    if (err instanceof UnauthorizedError) throw err;
     throw new UnauthorizedError("Token inválido o expirado");
   }
 });

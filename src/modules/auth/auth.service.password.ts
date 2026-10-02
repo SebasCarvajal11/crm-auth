@@ -10,6 +10,7 @@ import { BCRYPT_ROUNDS, PASSWORD_RESET_TTL_MS } from "./auth.constants";
 import { getLogger } from "../../shared/logger";
 import { createActionToken, hashActionToken } from "./action-token";
 import { encryptEmailJob } from "../../email/email-outbox-crypto";
+import { revokeUserSessions } from "@sebascarvajal11/cima-contracts/token-blocklist";
 
 const logger = getLogger();
 
@@ -102,6 +103,7 @@ export const createPasswordService = (repo: PasswordRepository) => ({
         forcePasswordChange: false,
       });
       await tx.revokeAllRefreshTokensForUser(resetRecord.userId);
+      await revokeUserSessions(resetRecord.userId);
       await tx.markPasswordResetAsUsed(resetRecord.id);
       await tx.invalidateUnusedPasswordResetsForUser(resetRecord.userId);
       await tx.invalidateUnusedEmailVerificationsForUser(resetRecord.userId);
@@ -136,6 +138,7 @@ export const createPasswordService = (repo: PasswordRepository) => ({
         forcePasswordChange: false,
       });
       await tx.revokeAllRefreshTokensForUser(userId);
+      await revokeUserSessions(userId);
       await tx.invalidateUnusedPasswordResetsForUser(userId);
       await tx.invalidateUnusedEmailVerificationsForUser(userId);
       await tx.createAuditLog(userId, "password_changed_known_old", ip, userAgent);

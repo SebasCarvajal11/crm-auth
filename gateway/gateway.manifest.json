@@ -51,8 +51,8 @@
       "method": "POST",
       "backend_url": "/api/v1/auth/login",
       "rate_limit": {
-        "client_max_rate": 200,
-        "client_capacity": 200,
+        "client_max_rate": 15,
+        "client_capacity": 15,
         "every": "15m",
         "strategy": "ip"
       },

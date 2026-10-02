@@ -38,21 +38,10 @@ export const deleteRefreshCookie = (c: Context) => {
   deleteCookie(c, "refresh_token", { path: REFRESH_COOKIE_PATH });
 };
 
+import { getTrustedClientIp } from "@sebascarvajal11/cima-contracts/hono-security-middleware";
+
 export const getRefreshCookie = (c: Context) => getCookie(c, "refresh_token");
 
-const normalizeIpCandidate = (value: string | undefined): string | null => {
-  if (!value) return null;
-  const first = value.split(",")[0]?.trim();
-  if (!first) return null;
-  if (first.toLowerCase() === "unknown") return null;
-  return first;
-};
-
-export const getIp = (c: Context) =>
-  normalizeIpCandidate(c.req.header("x-forwarded-for")) ??
-  normalizeIpCandidate(c.req.header("x-real-ip")) ??
-  normalizeIpCandidate(c.req.header("cf-connecting-ip")) ??
-  normalizeIpCandidate(c.req.header("x-client-ip")) ??
-  "unknown";
+export const getIp = (c: Context) => getTrustedClientIp(c);
 
 export const getUa = (c: Context) => c.req.header("user-agent") ?? "unknown";

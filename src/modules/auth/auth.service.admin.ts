@@ -9,6 +9,7 @@ import {
   BadRequestError,
   ForbiddenError,
 } from "../../shared/middlewares/error-handler.middleware";
+import { revokeUserSessions } from "@sebascarvajal11/cima-contracts/token-blocklist";
 
 export interface AdminAuditContext {
   adminUserId: string;
@@ -112,6 +113,7 @@ export const createAdminUserService = (repo: AdminUserRepository) => ({
 
       if (!params.isActive) {
         await tx.revokeAllRefreshTokensForUser(target.id);
+        await revokeUserSessions(target.id);
       }
     });
   },
@@ -150,6 +152,7 @@ export const createAdminUserService = (repo: AdminUserRepository) => ({
       if (!updated) throw new NotFoundError("Usuario no encontrado");
 
       await tx.revokeAllRefreshTokensForUser(target.id);
+      await revokeUserSessions(target.id);
       await tx.createAuditLog(ctx.adminUserId, "user_soft_deleted", ctx.ip, ctx.userAgent, {
         target_subject: targetSubject,
       });

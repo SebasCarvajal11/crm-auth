@@ -4,6 +4,7 @@ import { TooManyRequestsError } from "./error-handler.middleware";
 import { getRedisConnection } from "../redis";
 import { getLogger } from "../logger";
 import { env } from "../../config/env";
+import { getTrustedClientIp } from "@sebascarvajal11/cima-contracts/hono-security-middleware";
 
 const logger = getLogger();
 
@@ -91,10 +92,7 @@ export function ipRateLimit(opts: { maxAttempts: number; windowMs: number }) {
       await next();
       return;
     }
-    const ip =
-      c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ??
-      c.req.header("x-real-ip") ??
-      "unknown";
+    const ip = getTrustedClientIp(c);
     const bucketKey = `${c.req.path}:${ip}`;
 
     await checkRedisLimit(bucketKey, opts);

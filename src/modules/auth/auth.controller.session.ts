@@ -20,6 +20,7 @@ import {
   getUa,
   setRefreshCookie,
 } from "./auth.controller.helpers";
+import { revokeToken } from "@sebascarvajal11/cima-contracts/token-blocklist";
 
 export const createSessionControllerHandlers = (
   loginSessionService: LoginSessionService,
@@ -87,6 +88,14 @@ export const createSessionControllerHandlers = (
 
     if (wasCurrentSession) {
       deleteRefreshCookie(c);
+      const authHeader = c.req.header("Authorization");
+      const accessToken = authHeader?.startsWith("Bearer ")
+        ? authHeader.slice(7)
+        : undefined;
+      if (accessToken) {
+        const user = c.get("user");
+        await revokeToken(accessToken, user?.exp);
+      }
     }
 
     return c.json({ message: "Sesión cerrada correctamente" }, 200);
@@ -115,10 +124,18 @@ export const createSessionControllerHandlers = (
 
   logout: async (c: Context<AppEnv>) => {
     const rawRefreshToken = getRefreshCookie(c);
-    const { userId } = c.get("user");
+    const user = c.get("user");
+    const authHeader = c.req.header("Authorization");
+    const accessToken = authHeader?.startsWith("Bearer ")
+      ? authHeader.slice(7)
+      : undefined;
 
-    if (rawRefreshToken) {
-      await loginSessionService.logout(rawRefreshToken, userId, getIp(c), getUa(c));
+    if (accessToken) {
+      await revokeToken(accessToken, user?.exp);
+    }
+
+    if (rawRefreshToken && user?.userId) {
+      await loginSessionService.logout(rawRefreshToken, user.userId, getIp(c), getUa(c));
     }
 
     deleteRefreshCookie(c);
