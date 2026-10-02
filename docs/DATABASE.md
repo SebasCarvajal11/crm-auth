@@ -72,3 +72,17 @@ Fase 3: Contract (Limpieza)
 | `pnpm db:seed` | Carga identidades iniciales de prueba (admin, workers, clientes). |
 | `pnpm db:studio` | Levanta interfaz visual Drizzle Studio para inspección local. |
 | `pnpm db:ensure-audit-partitions` | Genera las particiones mensuales de auditoría para los próximos 3 meses. |
+
+---
+
+## 5. Configuración del Pool de Conexiones (`pg-config.ts`)
+
+Para soportar ráfagas de concurrencia sin agotar sockets del servidor ni sufrir bloqueos silenciosos:
+
+| Variable de Entorno | Valor por Defecto | Propósito Operativo |
+| :--- | :--- | :--- |
+| `DB_POOL_MAX` | `35` | Número máximo de conexiones físicas simultáneas por instancia. |
+| `DB_POOL_CONNECTION_TIMEOUT_MS` | `5000` (5s) | Límite para adquirir una conexión del pool; falla rápido (*fail-fast*) si la BD está saturada. |
+| `DB_POOL_IDLE_TIMEOUT_MS` | `30000` (30s) | Tiempo tras el cual una conexión inactiva es cerrada para liberar recursos. |
+| `DB_POOL_MAX_LIFETIME_SECONDS` | `1800` (30m) | Reciclaje preventivo de conexiones de larga duración contra fugas de memoria o socket stale. |
+

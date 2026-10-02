@@ -60,8 +60,9 @@ Cualquier mutación en la identidad de un usuario se publica en Redis Streams pa
 - **Validación Automática**: Durante el build de infraestructura, `crm-infra` lee el manifiesto y genera la configuración consolidada de KrakenD.
 - **Circuit Breaker (Disyuntor)**:
   - KrakenD monitorea `/api/v1/health`.
-  - Configuración: `max_errors: 3`, `interval: 60s`, `timeout: 10s`.
+  - Configuración: `max_errors: 30`, `interval: 30s`, `timeout: 10s` (calibrado en `registry/services.json` para evitar falsos positivos por errores de usuario 4xx).
   - Si el servicio se degrada, el gateway activa el disyuntor y responde con `503 Service Unavailable` limpio en lugar de agotar sockets.
+
 
 ---
 

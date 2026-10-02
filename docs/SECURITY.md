@@ -32,9 +32,15 @@ El sistema implementa **Refresh Token Rotation (RTR)** con **detección automát
 - Los refresh tokens **nunca se almacenan en texto plano**: se persiste exclusivamente su hash SHA-256 en `schema_auth.refresh_tokens`.
 - Si un atacante intercepta un token ya utilizado e intenta presentarlo, el sistema detecta la colisión en la familia y desactiva de inmediato todas las sesiones asociadas a ese dispositivo/familia.
 
+### Revocación Inmediata de Access Tokens (Redis Blocklist)
+A diferencia de arquitecturas puramente stateless donde los Access Tokens siguen siendo válidos hasta expirar, `crm-auth` implementa una lista de revocación en memoria mediante Redis (`cima-contracts/token-blocklist`):
+- **Por Token Individual (Logout)**: Al cerrar sesión, el identificador único `jti` se almacena con clave `auth:revocation:token:<jti>` y un TTL igual al tiempo remanente de vida del token.
+- **Por Usuario (Suspensión / Cambio de Clave)**: Se guarda la marca temporal de revocación en `auth:revocation:user:<userId>`. Cualquier Access Token emitido con `iat < revokedAt` es rechazado inmediatamente con `401 Unauthorized`.
+
 ---
 
 ## 3. Defensa Contra Fuerza Bruta y Abusos
+
 
 1. **Bloqueo Progresivo de Cuentas**:
    - Cada intento fallido de contraseña suma 1 a `failed_login_attempts`.
