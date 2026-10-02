@@ -77,8 +77,8 @@ const envSchema = z.object({
     .default(3),
   PORT: z.coerce.number().default(3000),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).optional(),
-  SERVICE_NAME: z.string().optional(),
   /**
+
    * Path del cookie httpOnly de refresh. Debe coincidir con la ruta que usa el navegador
    * (SPA con prefijo /api/v1: /api/v1/auth/refresh).
    */
