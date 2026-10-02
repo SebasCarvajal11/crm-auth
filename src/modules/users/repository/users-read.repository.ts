@@ -133,15 +133,18 @@ export const createUsersReadRepository = (conn: DbOrTx) => ({
     }
     const whereClause = conditions.length ? and(...conditions) : undefined;
 
-    const countBase = conn.select({ count: sql<number>`cast(count(*) as int)` }).from(users);
-    const [countRow] = whereClause
-      ? await countBase.where(whereClause)
-      : await countBase;
+    const countQuery = conn.select({ count: sql<number>`cast(count(*) as int)` }).from(users);
+    const rowsQuery = conn
+      .select(selection)
+      .from(users)
+      .orderBy(desc(users.createdAt))
+      .limit(opts.limit)
+      .offset(offset);
 
-    const rowsBase = conn.select(selection).from(users).orderBy(desc(users.createdAt));
-    const rows = whereClause
-      ? await rowsBase.where(whereClause).limit(opts.limit).offset(offset)
-      : await rowsBase.limit(opts.limit).offset(offset);
+    const [[countRow], rows] = await Promise.all([
+      whereClause ? countQuery.where(whereClause) : countQuery,
+      whereClause ? rowsQuery.where(whereClause) : rowsQuery,
+    ]);
 
     return { rows, total: countRow?.count ?? 0 };
   },
