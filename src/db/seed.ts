@@ -4,8 +4,9 @@
  */
 import { hash } from "bcrypt";
 import "dotenv/config";
+import { sql } from "drizzle-orm";
 import { db } from "./connection";
-import { users } from "./schema";
+import { identityOutbox, users } from "./schema";
 
 const ADMIN_PASSWORD = "Admin123!";
 const DEFAULT_PASSWORD = "Demo123!";
@@ -54,6 +55,8 @@ async function seed() {
 
   for (const user of USERS_TO_SEED) {
     const passwordHash = user.email === "admin@cima.dev" ? adminPasswordHash : defaultPasswordHash;
+    const [firstName, ...rest] = user.name.split(" ");
+    const lastName = rest.join(" ");
 
     try {
       const [created] = await db
@@ -62,6 +65,8 @@ async function seed() {
           email: user.email,
           passwordHash,
           role: user.role,
+          firstName: firstName || null,
+          lastName: lastName || null,
           emailVerifiedAt: new Date(),
         })
         .onConflictDoUpdate({
@@ -69,6 +74,8 @@ async function seed() {
           set: {
             passwordHash,
             role: user.role,
+            firstName: firstName || null,
+            lastName: lastName || null,
             failedLoginAttempts: 0,
             lockedUntil: null,
             forcePasswordChange: false,
@@ -78,6 +85,25 @@ async function seed() {
 
       if (created) {
         createdUsers.push(created);
+        await db
+          .insert(identityOutbox)
+          .values({
+            eventType: "auth.user.created",
+            aggregateId: created.subject,
+            payload: {
+              eventType: "auth.user.created",
+              subject: created.subject,
+              email: created.email,
+              role: created.role,
+              firstName: firstName || undefined,
+              lastName: lastName || undefined,
+              isActive: true,
+              version: 1,
+              occurredAt: new Date().toISOString(),
+            },
+            status: "pending",
+          })
+          .catch(() => {});
         console.log(`Creado/Actualizado: ${user.email} (${user.role})`);
       } else {
         console.log(`No se pudo actualizar: ${user.email}`);
@@ -86,6 +112,23 @@ async function seed() {
       console.error(`Error creando ${user.email}:`, error);
       failedUsers.push({ email: user.email, error });
     }
+  }
+
+  try {
+    await db.execute(sql`
+      INSERT INTO schema_collab.user_identity_snapshots (user_sub, email, role, first_name, last_name, created_at, updated_at)
+      SELECT subject, email, role, first_name, last_name, created_at, updated_at
+      FROM schema_auth.users
+      ON CONFLICT (user_sub) DO UPDATE SET
+        email = EXCLUDED.email,
+        role = EXCLUDED.role,
+        first_name = EXCLUDED.first_name,
+        last_name = EXCLUDED.last_name,
+        updated_at = EXCLUDED.updated_at;
+    `);
+    console.log("Sincronizados snapshots de identidad en schema_collab.");
+  } catch {
+    // Si schema_collab no existe aún en este entorno de BD, ignora.
   }
 
   if (failedUsers.length > 0 || createdUsers.length !== USERS_TO_SEED.length) {
