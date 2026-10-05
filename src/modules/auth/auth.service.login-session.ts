@@ -143,7 +143,7 @@ export const createLoginSessionService = (repo: LoginSessionRepository) => ({
       const user = await txRepo.findById(tokenRecord.userId);
       if (!user || !user.isActive) throw new UnauthorizedError("Usuario no disponible");
 
-      const newAccessToken = buildAccessToken(
+      const newAccessToken = await buildAccessToken(
         user.subject,
         user.id,
         user.role,

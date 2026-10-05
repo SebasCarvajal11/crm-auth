@@ -33,7 +33,7 @@ describe("auth.token-utils", () => {
   describe("buildAccessToken", () => {
     it("should issue a JWT with canonical iss 'cima-crm' and valid claims", async () => {
       const { buildAccessToken } = await import("./auth.token-utils");
-      const token = buildAccessToken(
+      const token = await buildAccessToken(
         "user-sub-123",
         "user-id-456",
         "admin",

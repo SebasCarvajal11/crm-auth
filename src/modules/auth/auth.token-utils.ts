@@ -13,13 +13,13 @@ export const generateOpaqueRefreshToken = () => randomBytes(40).toString("hex");
 export const hashRefreshToken = (token: string) =>
   createHash("sha256").update(token).digest("hex");
 
-export const buildAccessToken = (
+export const buildAccessToken = async (
   subject: string,
   userId: string,
   role: "admin" | "worker" | "client",
   email: string,
   forcePasswordChange?: boolean
-) => {
+): Promise<string> => {
   const now = Math.floor(Date.now() / 1000);
   const claims: Record<string, unknown> = {
     sub: subject,
@@ -48,7 +48,7 @@ export const issueTokenPair = async (
   repo: RefreshTokenWriter,
   opts: IssueTokenPairOptions
 ) => {
-  const accessToken = buildAccessToken(
+  const accessToken = await buildAccessToken(
     opts.subject,
     opts.userId,
     opts.role,

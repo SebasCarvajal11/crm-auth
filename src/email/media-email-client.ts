@@ -18,7 +18,7 @@ export async function dispatchTransactionalEmailToMedia(
   const body = JSON.stringify(request);
   return withRetry(async () => {
     const now = Math.floor(Date.now() / 1000);
-    const jwt = signRs256Jwt({
+    const jwt = await signRs256Jwt({
       iss: env.EMAIL_SERVICE_ISSUER, sub: env.EMAIL_SERVICE_ISSUER,
       aud: "crm-media:email", purpose: "email:dispatch",
       iat: now, exp: now + 60, bodyHash: createHash("sha256").update(body).digest("hex"),
