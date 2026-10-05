@@ -27,7 +27,7 @@ services:
         aliases:
           - auth
 
-  crm-auth-email-outbox-worker:
+  crm-auth-worker:
     build:
       context: .
       dockerfile: Dockerfile
@@ -36,7 +36,7 @@ services:
         PNPM_VERSION: ${PNPM_VERSION:-11.1.1}
     init: true
     restart: unless-stopped
-    command: ["pnpm", "worker:email-outbox"]
+    command: ["pnpm", "worker:auth"]
     env_file:
       - .env
     environment:
@@ -52,50 +52,3 @@ services:
     networks:
       - shared_backplane
 
-  crm-auth-identity-outbox-worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        NODE_IMAGE: ${NODE_IMAGE:-node:22-alpine}
-        PNPM_VERSION: ${PNPM_VERSION:-11.1.1}
-    init: true
-    restart: unless-stopped
-    command: ["pnpm", "worker:identity-outbox"]
-    env_file:
-      - .env
-    environment:
-      CONTAINER_MODE: worker
-      DATABASE_URL: postgresql://auth_user:${AUTH_DB_PASSWORD:-authpassword}@postgres_db:5432/crm_database
-      DB_SCHEMA: schema_auth
-      REDIS_URL: redis://redis:6379
-    depends_on:
-      crm-auth:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    networks:
-      - shared_backplane
-
-  crm-auth-token-cleanup-worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        NODE_IMAGE: ${NODE_IMAGE:-node:22-alpine}
-        PNPM_VERSION: ${PNPM_VERSION:-11.1.1}
-    init: true
-    restart: unless-stopped
-    command: ["pnpm", "worker:cleanup"]
-    env_file:
-      - .env
-    environment:
-      CONTAINER_MODE: worker
-      DATABASE_URL: postgresql://auth_user:${AUTH_DB_PASSWORD:-authpassword}@postgres_db:5432/crm_database
-      DB_SCHEMA: schema_auth
-      REDIS_URL: redis://redis:6379
-    depends_on:
-      crm-auth:
-        condition: service_healthy
-    networks:
-      - shared_backplane

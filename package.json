@@ -6,6 +6,7 @@
   "scripts": {
     "predev": "pnpm --prefix cima-contracts build",
     "dev": "tsx watch src/server.ts",
+    "worker:auth": "node dist/workers/auth.worker.js",
     "worker:email-outbox": "node dist/workers/email-outbox.worker.js",
     "worker:identity-outbox": "node dist/workers/identity-outbox.worker.js",
     "worker:cleanup": "node dist/workers/token-cleanup.worker.js",
