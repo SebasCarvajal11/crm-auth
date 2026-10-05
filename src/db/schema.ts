@@ -9,6 +9,7 @@ import {
   primaryKey,
   integer,
   index,
+  uniqueIndex,
   serial,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
@@ -66,7 +67,10 @@ export const refreshTokens = authSchema.table("refresh_tokens", {
   isPersistent: boolean("is_persistent").default(false).notNull(),
   isRevoked: boolean("is_revoked").default(false).notNull(),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
-}, (table) => [index("refresh_tokens_live_user_expiry_idx").on(table.userId, table.expiresAt).where(sql`${table.isRevoked} = false`)]);
+}, (table) => [
+  index("refresh_tokens_live_user_expiry_idx").on(table.userId, table.expiresAt).where(sql`${table.isRevoked} = false`),
+  uniqueIndex("refresh_tokens_token_hash_uq").on(table.tokenHash),
+]);
 
 /** Alta de cuenta cliente por email; datos comerciales/proyectos residen en crm-collab / crm-marketing. */
 export const invitations = authSchema.table("invitations", {
