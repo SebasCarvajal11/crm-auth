@@ -1,3 +1,5 @@
+import { fileURLToPath } from "node:url";
+import path from "node:path";
 import { env } from "../config/env";
 import { runIdentityOutbox } from "../jobs/run-identity-outbox";
 import { runEmailOutbox } from "../jobs/run-email-outbox";
@@ -94,6 +96,7 @@ async function tickTokenCleanup(): Promise<void> {
 }
 
 export async function startAuthWorker(): Promise<void> {
+  state.isShuttingDown = false;
   if (!env.REDIS_URL) {
     throw new Error("REDIS_URL es requerida para el auth worker consolidado");
   }
@@ -161,10 +164,10 @@ export async function stopAuthWorker(): Promise<void> {
   logger.info({ topic: "worker:auth" }, "Auth worker consolidado detenido");
 }
 
-const isDirectRun =
+const isDirectRun = Boolean(
   process.argv[1] &&
-  (import.meta.url.endsWith(process.argv[1].replace(/\\/g, "/")) ||
-    process.argv[1].includes("auth.worker"));
+    fileURLToPath(import.meta.url) === path.resolve(process.argv[1]),
+);
 
 if (isDirectRun) {
   const shutdown = async () => {

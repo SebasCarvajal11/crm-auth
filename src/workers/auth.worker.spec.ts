@@ -103,4 +103,13 @@ describe("auth.worker", () => {
     expect(mocks.closeRedisConnections).toHaveBeenCalled();
     expect(mocks.poolEnd).toHaveBeenCalled();
   });
+
+  it("tolera errores en ciclos de outbox y cleanup sin abortar el worker", async () => {
+    mocks.runIdentityOutbox.mockRejectedValueOnce(new Error("DB error"));
+    mocks.runEmailOutbox.mockRejectedValueOnce(new Error("Email error"));
+    mocks.runTokenCleanup.mockRejectedValueOnce(new Error("Cleanup error"));
+
+    await expect(startAuthWorker()).resolves.not.toThrow();
+    await stopAuthWorker();
+  });
 });
