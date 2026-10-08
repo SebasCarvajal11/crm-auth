@@ -51,9 +51,10 @@ export const InviteClientRequestSchema = z
 
 const passwordSchema = z
   .string()
-  .min(8)
+  .min(8, "Minimo 8 caracteres.")
+  .max(128, "Maximo 128 caracteres.")
   .regex(
-    /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
+    /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9\s]).+$/,
     "Minimo 8 caracteres, una mayuscula, un numero y un caracter especial."
   );
 
